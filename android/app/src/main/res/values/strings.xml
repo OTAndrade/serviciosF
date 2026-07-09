@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">iNeed</string>
+    <string name="google_maps_api_key">REEMPLAZAR_CON_API_KEY_GOOGLE_MAPS</string>
+</resources>

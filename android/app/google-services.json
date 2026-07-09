@@ -1,0 +1,56 @@
+{
+  "project_info": {
+    "project_number": "1022994478603",
+    "firebase_url": "https://servicios-fc6a6.firebaseio.com",
+    "project_id": "servicios-fc6a6",
+    "storage_bucket": "servicios-fc6a6.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1022994478603:android:ec68e1c798a25a561a790e",
+        "android_client_info": {
+          "package_name": "com.ineedserv.servicios"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1022994478603-orrlpuivo4isqai1qhid6naq4c2voj3h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ineedserv.servicios",
+            "certificate_hash": "d4d23db8a9ffe5ca5c776f24d6b00d6e7bb2ffd3"
+          }
+        },
+        {
+          "client_id": "1022994478603-qdqbnph5ulqak6sgl4g7bo1nmnh1atks.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ineedserv.servicios",
+            "certificate_hash": "ebd530cf69c2724da44946ded9767e59fc82c305"
+          }
+        },
+        {
+          "client_id": "1022994478603-93hof6jsgo1981b565gn6ap8te0okp3d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIx7iTcLbjYoGXIhigbeirp6lEHUrMEHk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1022994478603-93hof6jsgo1981b565gn6ap8te0okp3d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
