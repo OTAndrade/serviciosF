@@ -48,3 +48,15 @@ flutter:
     - assets/icons/
     - assets/markers/
     - assets/logos/
+
+  fonts:
+    - family: Fq
+      fonts:
+        - asset: assets/fonts/fq_regular.ttf
+          weight: 400
+        - asset: assets/fonts/fq_light.ttf
+          weight: 300
+        - asset: assets/fonts/fq_medium.ttf
+          weight: 500
+        - asset: assets/fonts/fq_bold.ttf
+          weight: 700

@@ -3,17 +3,24 @@ import 'package:flutter/material.dart';
 class AppColors {
   const AppColors._();
 
-  // Paleta inicial basada en la identidad visual original.
-  // Se ajustara cuando migremos los recursos reales de Android.
-  static const primary = Color(0xFF1565C0);
-  static const primaryDark = Color(0xFF0D47A1);
-  static const secondary = Color(0xFF00A6A6);
-  static const accent = Color(0xFFFF9800);
-  static const background = Color(0xFFF5F7FA);
-  static const surface = Colors.white;
-  static const textPrimary = Color(0xFF1F2933);
-  static const textSecondary = Color(0xFF52606D);
+  // Paleta oficial migrada desde res/values/colors.xml de Android nativo.
+  static const primary = Color(0xFFF5A057);
+  static const primaryDark = Color(0xFF444444);
+  static const accent = Color(0xFFF5A057);
+  static const ineed = Color(0xFFF5A057);
+  static const black = Color(0xFF444444);
+  static const white = Color(0xFFFFFFFF);
+
+  // Equivalentes de #80F5A057 y #70F5A057.
+  static const transparentBackground = Color(0x80F5A057);
+  static const transparentListBackground = Color(0x70F5A057);
+
+  // Semanticos centralizados para evitar duplicacion.
+  static const background = Color(0xFFFFFFFF);
+  static const surface = Color(0xFFFFFFFF);
+  static const textPrimary = Color(0xFF444444);
+  static const textSecondary = Color(0xFF666666);
   static const success = Color(0xFF2E7D32);
-  static const warning = Color(0xFFF9A825);
+  static const warning = Color(0xFFF5A057);
   static const danger = Color(0xFFC62828);
 }

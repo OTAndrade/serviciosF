@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../data/services/firebase_bootstrap_service.dart';
 
@@ -19,10 +20,10 @@ class HomeShellScreen extends ConsumerWidget {
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              const DrawerHeader(
+              DrawerHeader(
                 child: Align(
                   alignment: Alignment.bottomLeft,
-                  child: Text('iNeed', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                  child: Image.asset(AppAssets.logoSin, height: 72, fit: BoxFit.contain),
                 ),
               ),
               ListTile(
@@ -52,14 +53,14 @@ class HomeShellScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.map_outlined, size: 48),
+                Image.asset(AppAssets.logoMediano, height: 84, fit: BoxFit.contain),
                 const SizedBox(height: 12),
                 Text('Base Flutter iNeed', style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 8),
                 Text(
                   firebaseStatus.initialized
                       ? 'Firebase inicializado correctamente.'
-                      : 'Firebase pendiente de configurar. Agregar google-services.json y GoogleService-Info.plist en la siguiente fase.',
+                      : 'Firebase pendiente de configurar. Verificar google-services.json y GoogleService-Info.plist.',
                   textAlign: TextAlign.center,
                 ),
               ],
