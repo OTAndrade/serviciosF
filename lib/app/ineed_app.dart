@@ -12,7 +12,7 @@ class INeedApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'iNeed',
       theme: AppTheme.light,
-      initialRoute: AppRoutes.home,
+      initialRoute: AppRoutes.splash,
       routes: AppRoutes.routes,
     );
   }

@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../firebase_options.dart';
+
 class FirebaseBootstrapStatus {
   const FirebaseBootstrapStatus({required this.initialized, this.error});
 
@@ -17,11 +19,13 @@ class FirebaseBootstrapService {
 
   static Future<FirebaseBootstrapStatus> initialize() async {
     try {
-      await Firebase.initializeApp();
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
       return const FirebaseBootstrapStatus(initialized: true);
     } catch (error) {
-      // Durante la fase base todavia no se incluyeron google-services.json ni GoogleService-Info.plist.
-      // Se permite levantar la app para validar arquitectura, tema y navegacion.
       return FirebaseBootstrapStatus(initialized: false, error: error);
     }
   }

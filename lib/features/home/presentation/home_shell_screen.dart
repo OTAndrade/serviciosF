@@ -5,6 +5,7 @@ import '../../../app/routes/app_routes.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../data/services/firebase_bootstrap_service.dart';
+import '../../auth/application/auth_providers.dart';
 
 class HomeShellScreen extends ConsumerWidget {
   const HomeShellScreen({super.key});
@@ -36,10 +37,17 @@ class HomeShellScreen extends ConsumerWidget {
                 title: const Text(AppStrings.atiendeSolicitudes),
                 onTap: () => Navigator.pushNamed(context, AppRoutes.atiendeSolicitudes),
               ),
+
               ListTile(
-                leading: const Icon(Icons.login),
-                title: const Text('Login'),
-                onTap: () => Navigator.pushNamed(context, AppRoutes.login),
+                leading: const Icon(Icons.logout),
+                title: const Text('Cerrar sesión'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await ref.read(authControllerProvider.notifier).signOut();
+                  if (context.mounted) {
+                    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
+                  }
+                },
               ),
             ],
           ),
