@@ -101,12 +101,12 @@ class _LoginShellScreenState extends ConsumerState<LoginShellScreen> {
                             _SocialButton(
                               icon: Icons.facebook_outlined,
                               label: 'Ingresar con Facebook',
-                              onTap: () => _showPending('Facebook'),
+                              onTap: authState.isLoading ? () {} : _signInWithFacebook,
                             ),
                             _SocialButton(
                               icon: Icons.g_mobiledata,
                               label: 'Ingresar con Google',
-                              onTap: () => _showPending('Google'),
+                              onTap: authState.isLoading ? () {} : _signInWithGoogle,
                             ),
                             const SizedBox(height: 8),
                             TextButton(
@@ -135,11 +135,14 @@ class _LoginShellScreenState extends ConsumerState<LoginShellScreen> {
         );
   }
 
-  void _showPending(String provider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Login con $provider queda preparado para la siguiente iteración.')),
-    );
+  Future<void> _signInWithGoogle() async {
+    await ref.read(authControllerProvider.notifier).signInWithGoogle();
   }
+
+  Future<void> _signInWithFacebook() async {
+    await ref.read(authControllerProvider.notifier).signInWithFacebook();
+  }
+
 
   String? _requiredEmail(String? value) {
     final text = value?.trim() ?? '';

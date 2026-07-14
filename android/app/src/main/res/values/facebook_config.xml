@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="facebook_app_id" translatable="false">234675721104634</string>
+    <string name="fb_login_protocol_scheme" translatable="false">fb234675721104634</string>
+    <!-- Reemplazar por el Client Token de Meta Developers > Configuración > Avanzado. -->
+    <string name="facebook_client_token" translatable="false">acd2a0e3fd9850c7da9204af401e472d</string>
+</resources>

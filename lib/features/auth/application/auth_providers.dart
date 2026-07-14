@@ -82,6 +82,45 @@ class AuthController extends Notifier<AuthFormState> {
     }
   }
 
+  Future<void> signInWithGoogle() async {
+    state = const AuthFormState(isLoading: true);
+    try {
+      final credential = await _authService.signInWithGoogle();
+      final user = credential.user;
+      if (user != null) {
+        await _syncAuthenticatedUser(user);
+      }
+      state = const AuthFormState(message: 'Ingreso con Google correcto.');
+    } on FirebaseAuthException catch (error) {
+      state = AuthFormState(error: _authMessage(error));
+    } catch (error) {
+      state = AuthFormState(error: _googleAuthMessage(error));
+    }
+  }
+
+
+  Future<void> signInWithFacebook() async {
+    state = const AuthFormState(isLoading: true);
+    try {
+      final credential = await _authService.signInWithFacebook();
+      final user = credential.user;
+      if (user != null) {
+        await _syncAuthenticatedUser(user);
+      }
+      state = const AuthFormState(message: 'Ingreso con Facebook correcto.');
+    } on FacebookAuthCancelledException {
+      state = const AuthFormState(error: 'Se canceló el ingreso con Facebook.');
+    } on FacebookAuthFlowException catch (error) {
+      state = AuthFormState(error: error.message);
+    } on FirebaseAuthException catch (error) {
+      state = AuthFormState(error: _authMessage(error));
+    } catch (_) {
+      state = const AuthFormState(
+        error: 'No se pudo iniciar sesión con Facebook. Verifica la configuración de Meta y Firebase.',
+      );
+    }
+  }
+
   Future<void> sendPasswordResetEmail(String email) async {
     state = const AuthFormState(isLoading: true);
     try {
@@ -96,6 +135,26 @@ class AuthController extends Notifier<AuthFormState> {
 
   Future<void> signOut() async {
     await _authService.signOut();
+  }
+
+  Future<void> _syncAuthenticatedUser(User user) async {
+    await _usuarioRepository.createOrUpdateUser(
+      uid: user.uid,
+      values: <String, dynamic>{
+        if (user.displayName != null && user.displayName!.trim().isNotEmpty) 'nombre': user.displayName!.trim(),
+        if (user.email != null && user.email!.trim().isNotEmpty) 'correo': user.email!.trim(),
+        if (user.phoneNumber != null && user.phoneNumber!.trim().isNotEmpty) 'telefono': user.phoneNumber!.trim(),
+        'estado': 'AC',
+      },
+    );
+  }
+
+  String _googleAuthMessage(Object error) {
+    final text = error.toString();
+    if (text.contains('canceled') || text.contains('cancelled')) {
+      return 'Se canceló el ingreso con Google.';
+    }
+    return 'No se pudo iniciar sesión con Google. Verifica la configuración de Firebase y Google Sign-In.';
   }
 
   String _authMessage(FirebaseAuthException error) {

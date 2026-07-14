@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../features/home/presentation/widgets/ineed_drawer.dart';
+import '../../../shared/maps/app_map.dart';
 
 class BuscarServicioMapScreen extends StatefulWidget {
   const BuscarServicioMapScreen({super.key});
@@ -18,13 +20,27 @@ class _BuscarServicioMapScreenState extends State<BuscarServicioMapScreen> {
     zoom: 13,
   );
 
+  Set<Circle> get _searchCircle => {
+        Circle(
+          circleId: const CircleId('search-radius'),
+          center: _initialCameraPosition.target,
+          radius: _radioKm * 1000,
+          fillColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+          strokeColor: Theme.of(context).colorScheme.primary,
+          strokeWidth: 2,
+        ),
+      };
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const Drawer(child: SafeArea(child: Center(child: Text('Menu iNeed')))),
+      drawer: const INeedDrawer(),
       body: Stack(
         children: [
-          const GoogleMap(initialCameraPosition: _initialCameraPosition),
+          AppMap(
+            initialCameraPosition: _initialCameraPosition,
+            circles: _searchCircle,
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -42,7 +58,7 @@ class _BuscarServicioMapScreenState extends State<BuscarServicioMapScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Radio de busqueda: ${_radioKm.toStringAsFixed(1)} km'),
+                          Text('Radio de búsqueda: ${_radioKm.toStringAsFixed(1)} km'),
                           Slider(
                             value: _radioKm,
                             min: 1,
