@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">iNeed</string>
-    <string name="google_maps_api_key">REEMPLAZAR_CON_API_KEY_GOOGLE_MAPS</string>
+    <!-- Google Maps Android: usar una API key restringida por package + SHA-1. -->
+    <string name="google_maps_api_key">AIzaSyAIx7iTcLbjYoGXIhigbeirp6lEHUrMEHk</string>
 </resources>

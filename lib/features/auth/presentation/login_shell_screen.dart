@@ -30,6 +30,17 @@ class _LoginShellScreenState extends ConsumerState<LoginShellScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
 
+    ref.listen(authStateChangesProvider, (_, next) {
+      next.whenData((user) {
+        if (user == null || !context.mounted) return;
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.home,
+          (_) => false,
+        );
+      });
+    });
+
     return AuthFeedbackListener(
       child: Scaffold(
         body: Container(

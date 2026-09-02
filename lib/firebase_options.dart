@@ -33,8 +33,8 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBKdSkXRV6hlcpd7KVFuYGkhCmzod_OMtc',
-    appId: '1:1022994478603:android:164d41e85f8e44411a790e',
+    apiKey: 'AIzaSyAIx7iTcLbjYoGXIhigbeirp6lEHUrMEHk',
+    appId: '1:1022994478603:android:ec68e1c798a25a561a790e',
     messagingSenderId: '1022994478603',
     projectId: 'servicios-fc6a6',
     databaseURL: 'https://servicios-fc6a6.firebaseio.com',

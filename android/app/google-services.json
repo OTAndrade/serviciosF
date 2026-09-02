@@ -15,6 +15,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "1022994478603-6vqe5k30k9den33dpjk283fjcsnmbv69.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ineedserv.servicios",
+            "certificate_hash": "c714028071c495b48f5b7a17036c79f2645eeb23"
+          }
+        },
+        {
+          "client_id": "1022994478603-nnhsl51llp7ss1qcruc75v78bdpkcdi7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ineedserv.servicios",
+            "certificate_hash": "3770500eef31bf8192a0576f2a7fc6c573fe1ee8"
+          }
+        },
+        {
           "client_id": "1022994478603-orrlpuivo4isqai1qhid6naq4c2voj3h.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -46,6 +62,49 @@
             {
               "client_id": "1022994478603-93hof6jsgo1981b565gn6ap8te0okp3d.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "1022994478603-187mkvd3g20hft1u5rpg6doj86dhuij8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ineedserv.servicios.dev"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1022994478603:android:c5b4e7066fe2a4f61a790e",
+        "android_client_info": {
+          "package_name": "com.ineedserv.servicios.dev"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1022994478603-93hof6jsgo1981b565gn6ap8te0okp3d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIx7iTcLbjYoGXIhigbeirp6lEHUrMEHk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1022994478603-93hof6jsgo1981b565gn6ap8te0okp3d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1022994478603-187mkvd3g20hft1u5rpg6doj86dhuij8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ineedserv.servicios.dev"
+              }
             }
           ]
         }

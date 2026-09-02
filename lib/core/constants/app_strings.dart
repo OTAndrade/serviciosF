@@ -7,4 +7,9 @@ class AppStrings {
   static const historial = 'Historial';
   static const enviarSolicitudes = 'Enviar Solicitudes';
   static const limpiar = 'Limpiar';
+  static const ayuda = 'Ayuda';
+  static const modificaOficio = 'Modifica tu oficio/profesión';
+  static const administraContrasena = 'Administra tu contraseña';
+  static const acercaDe = 'Acerca de';
+  static const cerrarSesion = 'Cerrar sesión';
 }
