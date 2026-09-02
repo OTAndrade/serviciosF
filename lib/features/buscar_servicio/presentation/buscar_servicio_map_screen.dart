@@ -14,6 +14,7 @@ import '../../../shared/feedback/app_snackbar.dart';
 import '../../../shared/maps/app_map.dart';
 import '../../../shared/maps/marker_icon_registry.dart';
 import '../application/buscar_servicio_providers.dart';
+import '../application/enviar_solicitudes_service.dart';
 
 class BuscarServicioMapScreen extends ConsumerStatefulWidget {
   const BuscarServicioMapScreen({super.key});
@@ -35,6 +36,7 @@ class _BuscarServicioMapScreenState
   bool _updatingSearchController = false;
   bool _showSearchResults = false;
   bool _cargandoUbicacion = true;
+  bool _enviandoSolicitudes = false;
 
   LatLng? _ubicacionSolicitante;
   GoogleMapController? _mapController;
@@ -299,12 +301,86 @@ class _BuscarServicioMapScreenState
     return markers;
   }
 
-  void _informarEnvioPendiente(int cantidad) {
-    AppSnackbar.show(
-      context,
-      '$cantidad ofertante${cantidad == 1 ? '' : 's'} disponible${cantidad == 1 ? '' : 's'}. '
-      'El envío de solicitudes se implementará en el siguiente paso.',
-    );
+  Future<void> _enviarSolicitudes(
+    List<_OfertanteCercano> ofertantesCercanos,
+  ) async {
+    final servicio = _servicioSeleccionado;
+    final ubicacion = _ubicacionSolicitante;
+    final usuario = ref.read(currentUsuarioProvider).asData?.value;
+
+    if (servicio == null || ubicacion == null || usuario == null) {
+      AppSnackbar.show(
+        context,
+        'No se cuenta con toda la información necesaria para enviar la solicitud.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (_enviandoSolicitudes || ofertantesCercanos.isEmpty) return;
+
+    setState(() => _enviandoSolicitudes = true);
+
+    try {
+      final resultado = await EnviarSolicitudesService().enviar(
+        solicitante: usuario,
+        servicio: servicio.nombre,
+        latSolicitante: ubicacion.latitude,
+        lonSolicitante: ubicacion.longitude,
+        candidatos: ofertantesCercanos
+            .map(
+              (item) => SolicitudCandidata(
+                ofertante: item.ofertante,
+                distanciaKm: item.distanciaKm,
+              ),
+            )
+            .toList(growable: false),
+      );
+
+      if (!mounted) return;
+
+      if (resultado.enviadas == 0) {
+        AppSnackbar.show(
+          context,
+          'No se generaron solicitudes para los ofertantes encontrados.',
+          isError: true,
+        );
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Solicitud enviada'),
+          content: const Text(
+            'La solicitud de atención fue enviada, el(los) alfiler(es) de las '
+            'personas que puedan atenderlo cambiarán de color a amarillo, '
+            'usted puede elegir con quién concretar la cita.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted) return;
+      _limpiarBusqueda();
+    } catch (error) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        'No se pudieron enviar las solicitudes: $error',
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _enviandoSolicitudes = false);
+      }
+    }
   }
 
   @override
@@ -444,12 +520,21 @@ class _BuscarServicioMapScreenState
                             children: [
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: ofertantesCercanos.isEmpty
+                                  onPressed: ofertantesCercanos.isEmpty ||
+                                          _enviandoSolicitudes
                                       ? null
-                                      : () => _informarEnvioPendiente(
-                                            ofertantesCercanos.length,
+                                      : () => _enviarSolicitudes(
+                                            ofertantesCercanos,
                                           ),
-                                  icon: const Icon(Icons.send_outlined),
+                                  icon: _enviandoSolicitudes
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.send_outlined),
                                   label: const Text(
                                     AppStrings.enviarSolicitudes,
                                   ),
