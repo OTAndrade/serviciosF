@@ -12,6 +12,11 @@ class SolicitudModel {
     this.fechaConfirmacion,
     this.fechaCita,
     this.horaCita,
+    this.distancia,
+    this.telefonoDr,
+    this.direccion,
+    this.costo,
+    this.experiencia,
     this.latOfertante,
     this.lonOfertante,
     this.raw = const {},
@@ -29,6 +34,11 @@ class SolicitudModel {
   final String? fechaConfirmacion;
   final String? fechaCita;
   final String? horaCita;
+  final String? distancia;
+  final String? telefonoDr;
+  final String? direccion;
+  final String? costo;
+  final String? experiencia;
   final double? latOfertante;
   final double? lonOfertante;
   final Map<String, dynamic> raw;
@@ -48,6 +58,11 @@ class SolicitudModel {
       fechaConfirmacion: data['fechaConfirmacion']?.toString(),
       fechaCita: data['fechaCita']?.toString(),
       horaCita: data['horaCita']?.toString(),
+      distancia: data['distancia']?.toString(),
+      telefonoDr: data['telefonoDr']?.toString(),
+      direccion: data['direccion']?.toString(),
+      costo: data['costo']?.toString(),
+      experiencia: data['experiencia']?.toString(),
       latOfertante: _toDouble(data['latOfertante']),
       lonOfertante: _toDouble(data['lonOfertante']),
       raw: data,

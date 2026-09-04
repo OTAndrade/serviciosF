@@ -98,7 +98,9 @@ class EnviarSolicitudesService {
         'servicio': servicio,
         'latSolicitante': latSolicitante,
         'lonSolicitante': lonSolicitante,
-        'telefonoPcte': solicitante.telefono ?? '',
+        'telefonoPcte': (solicitante.instancia?.trim().isNotEmpty ?? false)
+            ? solicitante.instancia!.trim()
+            : (solicitante.telefono ?? '').trim(),
         'idDr': idDr,
         'idPcte': idPcte,
         'fechaSolicitud': fechaSolicitud,

@@ -7,6 +7,8 @@ class BandejaModel {
     this.idPcte,
     this.nombreDr,
     this.nombrePcte,
+    this.distancia,
+    this.telefonoPcte,
     this.fechaSolicitud,
     this.fechaAceptacion,
     this.fechaConfirmacion,
@@ -14,7 +16,7 @@ class BandejaModel {
     this.horaCita,
     this.latSolicitante,
     this.lonSolicitante,
-    this.raw = const {},
+    this.raw = const <String, dynamic>{},
   });
 
   final String id;
@@ -24,6 +26,8 @@ class BandejaModel {
   final String? idPcte;
   final String? nombreDr;
   final String? nombrePcte;
+  final String? distancia;
+  final String? telefonoPcte;
   final String? fechaSolicitud;
   final String? fechaAceptacion;
   final String? fechaConfirmacion;
@@ -35,6 +39,7 @@ class BandejaModel {
 
   factory BandejaModel.fromMap(String id, Map<dynamic, dynamic> map) {
     final data = Map<String, dynamic>.from(map);
+
     return BandejaModel(
       id: id,
       estado: data['estado']?.toString() ?? '',
@@ -43,6 +48,8 @@ class BandejaModel {
       idPcte: data['idPcte']?.toString(),
       nombreDr: data['nombreDr']?.toString(),
       nombrePcte: data['nombrePcte']?.toString(),
+      distancia: data['distancia']?.toString(),
+      telefonoPcte: data['telefonoPcte']?.toString(),
       fechaSolicitud: data['fechaSolicitud']?.toString(),
       fechaAceptacion: data['fechaAceptacion']?.toString(),
       fechaConfirmacion: data['fechaConfirmacion']?.toString(),
@@ -53,6 +60,9 @@ class BandejaModel {
       raw: data,
     );
   }
+
+  bool get tieneCoordenadas =>
+      latSolicitante != null && lonSolicitante != null;
 
   static double? _toDouble(Object? value) {
     if (value == null) return null;

@@ -4,9 +4,11 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/app_states.dart';
 import '../../../core/geo/distance_calculator.dart';
 import '../../../core/location/app_location_service.dart';
 import '../../../data/models/ofertante_model.dart';
+import '../../../data/models/solicitud_model.dart';
 import '../../../data/models/sub_rubro_model.dart';
 import '../../../features/home/application/session_providers.dart';
 import '../../../features/home/presentation/widgets/ineed_drawer.dart';
@@ -15,6 +17,7 @@ import '../../../shared/maps/app_map.dart';
 import '../../../shared/maps/marker_icon_registry.dart';
 import '../application/buscar_servicio_providers.dart';
 import '../application/enviar_solicitudes_service.dart';
+import '../application/confirmar_solicitud_service.dart';
 
 class BuscarServicioMapScreen extends ConsumerStatefulWidget {
   const BuscarServicioMapScreen({super.key});
@@ -37,10 +40,18 @@ class _BuscarServicioMapScreenState
   bool _showSearchResults = false;
   bool _cargandoUbicacion = true;
   bool _enviandoSolicitudes = false;
+  bool _confirmandoSolicitud = false;
+  SolicitudModel? _solicitudEnviadaSeleccionada;
+  SolicitudModel? _solicitudAceptadaSeleccionada;
+  SolicitudModel? _solicitudConfirmadaSeleccionada;
+  MarkerId? _infoWindowNativoAbierto;
 
   LatLng? _ubicacionSolicitante;
   GoogleMapController? _mapController;
   BitmapDescriptor? _ofertanteIcon;
+  BitmapDescriptor? _solicitudElaboradaIcon;
+  BitmapDescriptor? _solicitudAceptadaIcon;
+  BitmapDescriptor? _solicitudConfirmadaIcon;
 
   static const _initialCameraPosition = CameraPosition(
     target: LatLng(-16.5000, -68.1500),
@@ -59,6 +70,7 @@ class _BuscarServicioMapScreenState
     await Future.wait([
       _cargarUbicacionSolicitante(),
       _cargarIconoOfertante(),
+      _cargarIconosSolicitudes(),
     ]);
   }
 
@@ -68,6 +80,24 @@ class _BuscarServicioMapScreenState
       if (mounted) setState(() => _ofertanteIcon = icon);
     } catch (_) {
       // Si el asset no pudiera cargarse se usa el marcador por defecto.
+    }
+  }
+
+  Future<void> _cargarIconosSolicitudes() async {
+    try {
+      final icons = await Future.wait([
+        MarkerIconRegistry.elaborada(),
+        MarkerIconRegistry.pendiente(),
+        MarkerIconRegistry.aceptada(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _solicitudElaboradaIcon = icons[0];
+        _solicitudAceptadaIcon = icons[1];
+        _solicitudConfirmadaIcon = icons[2];
+      });
+    } catch (_) {
+      // Se conserva el marcador por defecto si algún asset no puede cargarse.
     }
   }
 
@@ -153,6 +183,10 @@ class _BuscarServicioMapScreenState
       _servicioSeleccionado = servicio;
       _query = servicio.nombre;
       _showSearchResults = false;
+      _solicitudEnviadaSeleccionada = null;
+      _solicitudAceptadaSeleccionada = null;
+      _solicitudConfirmadaSeleccionada = null;
+      _infoWindowNativoAbierto = null;
     });
 
     _searchFocusNode.unfocus();
@@ -167,6 +201,10 @@ class _BuscarServicioMapScreenState
       _servicioSeleccionado = null;
       _query = '';
       _showSearchResults = true;
+      _solicitudEnviadaSeleccionada = null;
+      _solicitudAceptadaSeleccionada = null;
+      _solicitudConfirmadaSeleccionada = null;
+      _infoWindowNativoAbierto = null;
       if (!mantenerRadio) _radioKm = 1;
     });
 
@@ -251,7 +289,7 @@ class _BuscarServicioMapScreenState
     return resultado;
   }
 
-  Set<Marker> _buildMarkers(List<_OfertanteCercano> ofertantes) {
+  Set<Marker> _buildOfertanteMarkers(List<_OfertanteCercano> ofertantes) {
     final markers = <Marker>{};
     final ubicacion = _ubicacionSolicitante;
 
@@ -299,6 +337,180 @@ class _BuscarServicioMapScreenState
     }
 
     return markers;
+  }
+
+  BitmapDescriptor _iconoSolicitud(String estado) {
+    switch (estado) {
+      case AppStates.elaborada:
+        return _solicitudElaboradaIcon ?? BitmapDescriptor.defaultMarker;
+      case AppStates.aceptada:
+        return _solicitudAceptadaIcon ?? BitmapDescriptor.defaultMarker;
+      case AppStates.confirmada:
+        return _solicitudConfirmadaIcon ?? BitmapDescriptor.defaultMarker;
+      default:
+        return BitmapDescriptor.defaultMarker;
+    }
+  }
+
+  String _experienciaCalculada(SolicitudModel solicitud) {
+    final inicio = int.tryParse((solicitud.experiencia ?? '').trim());
+    if (inicio == null) return solicitud.experiencia ?? '';
+    return (DateTime.now().year - inicio).toString();
+  }
+
+  String _fechaCitaTexto(SolicitudModel solicitud) {
+    final fecha = (solicitud.fechaCita ?? '').trim();
+    if (fecha.isEmpty) return '';
+    final hoy = '${DateTime.now().day.toString().padLeft(2, '0')}-'
+        '${DateTime.now().month.toString().padLeft(2, '0')}-'
+        '${DateTime.now().year}';
+    return fecha == hoy ? 'Hoy' : 'el $fecha';
+  }
+
+  InfoWindow _infoSolicitud(SolicitudModel solicitud) {
+    final experiencia = _experienciaCalculada(solicitud);
+    final fechaCita = _fechaCitaTexto(solicitud);
+
+    switch (solicitud.estado) {
+      case AppStates.aceptada:
+        // ACEPTADA usa tarjeta Flutter personalizada para no truncar
+        // la información de programación que mostraba Android.
+        return InfoWindow.noText;
+      case AppStates.confirmada:
+        // CONFIRMADA usa tarjeta Flutter personalizada para mostrar
+        // completa la información de cita de la app Android original.
+        return InfoWindow.noText;
+      case AppStates.elaborada:
+      default:
+        // ELABORADA usa un InfoWindow personalizado Flutter.
+        // El InfoWindow nativo de google_maps_flutter recorta el contenido
+        // multilínea en Android/Web.
+        return InfoWindow.noText;
+    }
+  }
+
+  Future<void> _cerrarInfoWindowNativo() async {
+    final markerId = _infoWindowNativoAbierto;
+    if (markerId == null) return;
+
+    try {
+      await _mapController?.hideMarkerInfoWindow(markerId);
+    } catch (_) {
+      // El marcador pudo desaparecer por una actualización Realtime.
+    } finally {
+      _infoWindowNativoAbierto = null;
+    }
+  }
+
+  Future<void> _abrirDetalleSolicitud(
+    SolicitudModel solicitud,
+    MarkerId markerId,
+  ) async {
+    await _cerrarInfoWindowNativo();
+
+    if (!mounted) return;
+
+    setState(() {
+      _solicitudEnviadaSeleccionada =
+          solicitud.estado == AppStates.elaborada ? solicitud : null;
+      _solicitudAceptadaSeleccionada =
+          solicitud.estado == AppStates.aceptada ? solicitud : null;
+      _solicitudConfirmadaSeleccionada =
+          solicitud.estado == AppStates.confirmada ? solicitud : null;
+    });
+  }
+
+  Set<Marker> _buildSolicitudMarkers(List<SolicitudModel> solicitudes) {
+    final markers = <Marker>{};
+    final ubicacion = _ubicacionSolicitante;
+
+    if (ubicacion != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('ubicacion-solicitante'),
+          position: ubicacion,
+          draggable: true,
+          infoWindow: const InfoWindow(
+            title: 'Tu ubicación',
+            snippet: 'Se enviará la solicitud desde esta ubicación',
+          ),
+          onDragEnd: _moverUbicacionSolicitante,
+        ),
+      );
+    }
+
+    for (final solicitud in solicitudes) {
+      // En Android las solicitudes CANCELADAS no se muestran en el mapa.
+      if (solicitud.estado == AppStates.cancelada) continue;
+      final lat = solicitud.latOfertante;
+      final lon = solicitud.lonOfertante;
+      if (lat == null || lon == null) continue;
+
+      final markerId = MarkerId('solicitud-${solicitud.id}');
+
+      markers.add(
+        Marker(
+          markerId: markerId,
+          position: LatLng(lat, lon),
+          icon: _iconoSolicitud(solicitud.estado),
+          infoWindow: _infoSolicitud(solicitud),
+          onTap: () => _abrirDetalleSolicitud(solicitud, markerId),
+        ),
+      );
+    }
+
+    return markers;
+  }
+
+  Future<void> _confirmarSolicitudAceptada(
+    SolicitudModel solicitud,
+  ) async {
+    if (_confirmandoSolicitud ||
+        solicitud.estado != AppStates.aceptada) {
+      return;
+    }
+
+    setState(() => _confirmandoSolicitud = true);
+
+    try {
+      await ConfirmarSolicitudService().confirmar(solicitud);
+
+      if (!mounted) return;
+      setState(() {
+        _solicitudAceptadaSeleccionada = null;
+      });
+      AppSnackbar.show(
+        context,
+        'Ofertante confirmado.',
+      );
+      // No hacemos refresh manual: el listener Realtime de Solicitudes
+      // actualizará automáticamente pines y estados.
+    } catch (error) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        'No se pudo confirmar al ofertante: $error',
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _confirmandoSolicitud = false);
+      }
+    }
+  }
+
+  void _restablecerDespuesDeEnvio() {
+    _updatingSearchController = true;
+    _searchController.clear();
+    _updatingSearchController = false;
+    _searchFocusNode.unfocus();
+
+    setState(() {
+      _servicioSeleccionado = null;
+      _query = '';
+      _showSearchResults = false;
+      _radioKm = 1;
+    });
   }
 
   Future<void> _enviarSolicitudes(
@@ -368,7 +580,7 @@ class _BuscarServicioMapScreenState
       );
 
       if (!mounted) return;
-      _limpiarBusqueda();
+      _restablecerDespuesDeEnvio();
     } catch (error) {
       if (!mounted) return;
       AppSnackbar.show(
@@ -398,7 +610,56 @@ class _BuscarServicioMapScreenState
       orElse: () => const <_OfertanteCercano>[],
     );
 
-    final markers = _buildMarkers(ofertantesCercanos);
+    final uidSolicitante = usuario.asData?.value?.uid.trim() ?? '';
+    final solicitudesAsync = uidSolicitante.isEmpty
+        ? const AsyncValue<List<SolicitudModel>>.data(<SolicitudModel>[])
+        : ref.watch(solicitudesDelDiaProvider(uidSolicitante));
+    final solicitudesDelDia = solicitudesAsync.maybeWhen(
+      data: (items) => items,
+      orElse: () => const <SolicitudModel>[],
+    );
+
+    SolicitudModel? solicitudEnviadaActiva;
+    final seleccionada = _solicitudEnviadaSeleccionada;
+    if (seleccionada != null && _servicioSeleccionado == null) {
+      for (final item in solicitudesDelDia) {
+        if (item.id == seleccionada.id &&
+            item.estado == AppStates.elaborada) {
+          solicitudEnviadaActiva = item;
+          break;
+        }
+      }
+    }
+
+    SolicitudModel? solicitudAceptadaActiva;
+    final aceptadaSeleccionada = _solicitudAceptadaSeleccionada;
+    if (aceptadaSeleccionada != null && _servicioSeleccionado == null) {
+      for (final item in solicitudesDelDia) {
+        if (item.id == aceptadaSeleccionada.id &&
+            item.estado == AppStates.aceptada) {
+          solicitudAceptadaActiva = item;
+          break;
+        }
+      }
+    }
+
+    SolicitudModel? solicitudConfirmadaActiva;
+    final confirmadaSeleccionada = _solicitudConfirmadaSeleccionada;
+    if (confirmadaSeleccionada != null && _servicioSeleccionado == null) {
+      for (final item in solicitudesDelDia) {
+        if (item.id == confirmadaSeleccionada.id &&
+            item.estado == AppStates.confirmada) {
+          solicitudConfirmadaActiva = item;
+          break;
+        }
+      }
+    }
+
+    // Equivalencia con Android: durante una búsqueda se ven candidatos;
+    // sin servicio seleccionado se recuperan y muestran las solicitudes de hoy.
+    final markers = _servicioSeleccionado != null
+        ? _buildOfertanteMarkers(ofertantesCercanos)
+        : _buildSolicitudMarkers(solicitudesDelDia);
 
     return Scaffold(
       drawer: const INeedDrawer(),
@@ -418,6 +679,63 @@ class _BuscarServicioMapScreenState
               }
             },
           ),
+          if (solicitudEnviadaActiva != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 205,
+              child: PointerInterceptor(
+                child: _SolicitudEnviadaInfoWindow(
+                  solicitud: solicitudEnviadaActiva,
+                  onClose: () {
+                    setState(() {
+                      _solicitudEnviadaSeleccionada = null;
+                    });
+                  },
+                ),
+              ),
+            ),
+          if (solicitudAceptadaActiva != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 205,
+              child: PointerInterceptor(
+                child: _SolicitudAceptadaInfoWindow(
+                  solicitud: solicitudAceptadaActiva!,
+                  experiencia: _experienciaCalculada(solicitudAceptadaActiva),
+                  fechaCitaTexto: _fechaCitaTexto(solicitudAceptadaActiva),
+                  confirmando: _confirmandoSolicitud,
+                  onClose: () {
+                    setState(() {
+                      _solicitudAceptadaSeleccionada = null;
+                    });
+                  },
+                  onConfirmar: () =>
+                      _confirmarSolicitudAceptada(solicitudAceptadaActiva!),
+                ),
+              ),
+            ),
+          if (solicitudConfirmadaActiva != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 205,
+              child: PointerInterceptor(
+                child: _SolicitudConfirmadaInfoWindow(
+                  solicitud: solicitudConfirmadaActiva!,
+                  experiencia:
+                      _experienciaCalculada(solicitudConfirmadaActiva),
+                  fechaCitaTexto:
+                      _fechaCitaTexto(solicitudConfirmadaActiva),
+                  onClose: () {
+                    setState(() {
+                      _solicitudConfirmadaSeleccionada = null;
+                    });
+                  },
+                ),
+              ),
+            ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -554,6 +872,294 @@ class _BuscarServicioMapScreenState
                 ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SolicitudConfirmadaInfoWindow extends StatelessWidget {
+  const _SolicitudConfirmadaInfoWindow({
+    required this.solicitud,
+    required this.experiencia,
+    required this.fechaCitaTexto,
+    required this.onClose,
+  });
+
+  final SolicitudModel solicitud;
+  final String experiencia;
+  final String fechaCitaTexto;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final hora = (solicitud.horaCita ?? '').trim();
+    final nombre = (solicitud.nombreDr ?? '').trim();
+    final telefono = (solicitud.telefonoDr ?? '').trim();
+    final direccion = (solicitud.direccion ?? '').trim();
+    final costo = (solicitud.costo ?? '').trim();
+    final distancia = (solicitud.distancia ?? '').trim();
+
+    return Material(
+      elevation: 7,
+      borderRadius: BorderRadius.circular(10),
+      color: const Color(0xFF444444),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 42, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(
+                  child: Text(
+                    'Solicitud Confirmada',
+                    style: TextStyle(
+                      color: Color(0xFFF5A057),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Center(
+                  child: Text(
+                    'Ud. tiene una cita $fechaCitaTexto a hrs: $hora',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFF5A057),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Con el(la) señor(a): $nombre',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                Text(
+                  'Nro. Ref: $telefono',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                Text(
+                  'Dirección: $direccion',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                Text(
+                  'Costo atención: $costo',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                Text(
+                  'Distancia: $distancia',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                Text(
+                  'Años de experiencia: $experiencia',
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 2,
+            right: 2,
+            child: IconButton(
+              tooltip: 'Cerrar',
+              onPressed: onClose,
+              icon: const Icon(
+                Icons.close,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SolicitudAceptadaInfoWindow extends StatelessWidget {
+  const _SolicitudAceptadaInfoWindow({
+    required this.solicitud,
+    required this.experiencia,
+    required this.fechaCitaTexto,
+    required this.confirmando,
+    required this.onClose,
+    required this.onConfirmar,
+  });
+
+  final SolicitudModel solicitud;
+  final String experiencia;
+  final String fechaCitaTexto;
+  final bool confirmando;
+  final VoidCallback onClose;
+  final VoidCallback onConfirmar;
+
+  @override
+  Widget build(BuildContext context) {
+    final servicio = (solicitud.servicio ?? '').trim();
+    final hora = (solicitud.horaCita ?? '').trim();
+    final costo = (solicitud.costo ?? '').trim();
+    final telefono = (solicitud.telefonoDr ?? '').trim();
+    final nombre = (solicitud.nombreDr ?? '').trim();
+    final direccion = (solicitud.direccion ?? '').trim();
+
+    return Material(
+      elevation: 7,
+      borderRadius: BorderRadius.circular(10),
+      color: const Color(0xFF444444),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: confirmando ? null : onConfirmar,
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 42, 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Text(
+                      servicio,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFFF5A057),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  const Center(
+                    child: Text(
+                      'Solicitud aceptada',
+                      style: TextStyle(
+                        color: Color(0xFFF5A057),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Fecha cita $fechaCitaTexto',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  Text(
+                    'Hora $hora',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  Text(
+                    'Costo $costo',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  Text(
+                    'Experiencia $experiencia',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  Text(
+                    'Teléfono $telefono',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  Text(
+                    'Ofertante $nombre',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  Text(
+                    'Dirección $direccion',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: confirmando
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Tocar para confirmar',
+                            style: TextStyle(
+                              color: Color(0xFFF5A057),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 2,
+              right: 2,
+              child: IconButton(
+                tooltip: 'Cerrar',
+                onPressed: onClose,
+                icon: const Icon(Icons.close, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SolicitudEnviadaInfoWindow extends StatelessWidget {
+  const _SolicitudEnviadaInfoWindow({
+    required this.solicitud,
+    required this.onClose,
+  });
+
+  final SolicitudModel solicitud;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final nombre = (solicitud.nombreDr ?? '').trim();
+    final servicio = (solicitud.servicio ?? '').trim();
+    final distancia = (solicitud.distancia ?? '').trim();
+    final direccion = (solicitud.direccion ?? '').trim();
+
+    return Material(
+      elevation: 7,
+      borderRadius: BorderRadius.circular(10),
+      color: Colors.white,
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 42, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(
+                  child: Text(
+                    'Solicitud enviada.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text('Sr(a): $nombre'),
+                Text('Especialidad: $servicio'),
+                Text('a $distancia Km. de distancia'),
+                Text('Dirección: $direccion'),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 2,
+            right: 2,
+            child: IconButton(
+              tooltip: 'Cerrar',
+              onPressed: onClose,
+              icon: const Icon(Icons.close),
             ),
           ),
         ],

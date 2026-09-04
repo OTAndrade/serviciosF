@@ -35,14 +35,17 @@ class MarkerIconRegistry {
       );
 
   static Future<BitmapDescriptor> bySolicitudEstado(String estado) {
+    // Equivalencia con cargaMarcasMapaFB() de OfertaFragment.java:
+    // ELABORADA -> ic_alfilerel
+    // ACEPTADA -> ic_alfilerpe
+    // CONFIRMADA -> ic_alfilerac
     switch (estado) {
-      case AppStates.aceptada:
-      case AppStates.confirmada:
-        return aceptada();
       case AppStates.elaborada:
         return elaborada();
-      case AppStates.cancelada:
+      case AppStates.aceptada:
         return pendiente();
+      case AppStates.confirmada:
+        return aceptada();
       default:
         return pendiente();
     }

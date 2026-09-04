@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/ofertante_model.dart';
 import '../../../data/models/sub_rubro_model.dart';
+import '../../../data/models/solicitud_model.dart';
 import '../../../data/repositories/ofertante_repository.dart';
 import '../../../data/repositories/sub_rubro_repository.dart';
+import '../../../data/repositories/solicitud_repository.dart';
 
 final subRubroRepositoryProvider = Provider<SubRubroRepository>((ref) {
   return SubRubroRepository();
@@ -21,4 +23,16 @@ final ofertanteRepositoryProvider = Provider<OfertanteRepository>((ref) {
 final ofertantesActivosPorCiudadProvider =
     StreamProvider.family<List<OfertanteModel>, String>((ref, ciudad) {
   return ref.watch(ofertanteRepositoryProvider).watchActivosPorCiudad(ciudad);
+});
+
+
+final solicitudRepositoryProvider = Provider<SolicitudRepository>((ref) {
+  return SolicitudRepository();
+});
+
+final solicitudesDelDiaProvider =
+    StreamProvider.family<List<SolicitudModel>, String>((ref, uidSolicitante) {
+  return ref
+      .watch(solicitudRepositoryProvider)
+      .watchSolicitudesDelDia(uidSolicitante);
 });
