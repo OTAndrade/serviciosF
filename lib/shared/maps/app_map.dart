@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -13,6 +15,7 @@ class AppMap extends StatefulWidget {
     this.onTap,
     this.myLocationEnabled = true,
     this.showCurrentLocationButton = true,
+    this.eagerGestureRecognition = false,
     super.key,
   });
 
@@ -23,6 +26,10 @@ class AppMap extends StatefulWidget {
   final ValueChanged<LatLng>? onTap;
   final bool myLocationEnabled;
   final bool showCurrentLocationButton;
+
+  /// Hace que el mapa capture los gestos antes que un scroll contenedor.
+  /// Útil cuando AppMap está dentro de un formulario desplazable.
+  final bool eagerGestureRecognition;
 
   @override
   State<AppMap> createState() => _AppMapState();
@@ -80,6 +87,13 @@ class _AppMapState extends State<AppMap> {
           myLocationEnabled: widget.myLocationEnabled && _locationReady,
           myLocationButtonEnabled: false,
           zoomControlsEnabled: false,
+          gestureRecognizers: widget.eagerGestureRecognition
+              ? <Factory<OneSequenceGestureRecognizer>>{
+                  Factory<EagerGestureRecognizer>(
+                    () => EagerGestureRecognizer(),
+                  ),
+                }
+              : const <Factory<OneSequenceGestureRecognizer>>{},
           onMapCreated: (controller) {
             _controller = controller;
             widget.onMapCreated?.call(controller);

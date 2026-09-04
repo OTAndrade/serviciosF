@@ -9,6 +9,8 @@ import '../../features/auth/presentation/register_user_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/buscar_servicio/presentation/buscar_servicio_map_screen.dart';
 import '../../features/home/presentation/home_shell_screen.dart';
+import '../../features/modifica_oficio/presentation/modifica_oficio_screen.dart';
+import '../../features/registra_oficio/presentation/registra_oficio_screen.dart';
 import '../../features/soporte/presentation/feature_placeholder_screen.dart';
 
 class AppRoutes {
@@ -23,6 +25,7 @@ class AppRoutes {
   static const buscarServicio = '/buscar-servicio';
   static const atiendeSolicitudes = '/atiende-solicitudes';
   static const ayuda = '/ayuda';
+  static const registraOficio = '/registra-oficio';
   static const modificaOficio = '/modifica-oficio';
   static const administraContrasena = '/administra-contrasena';
   static const acercaDe = '/acerca-de';
@@ -41,11 +44,8 @@ class AppRoutes {
               description: 'La funcionalidad se migrará respetando la pantalla y el contenido de la aplicación original.',
               icon: Icons.help_outline,
             ),
-        modificaOficio: (_) => const FeaturePlaceholderScreen(
-              title: AppStrings.modificaOficio,
-              description: 'La lógica original de oficio/profesión será incorporada en su caso de uso correspondiente.',
-              icon: Icons.work_outline,
-            ),
+        registraOficio: (_) => const RegistraOficioScreen(),
+        modificaOficio: (_) => const ModificaOficioScreen(),
         administraContrasena: (_) => const FeaturePlaceholderScreen(
               title: AppStrings.administraContrasena,
               description: 'Esta pantalla será migrada conservando el comportamiento actual de iNeed.',

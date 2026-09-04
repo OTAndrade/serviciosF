@@ -8,6 +8,7 @@ class AppStrings {
   static const enviarSolicitudes = 'Enviar Solicitudes';
   static const limpiar = 'Limpiar';
   static const ayuda = 'Ayuda';
+  static const registraOficio = 'Registra tu oficio/profesión';
   static const modificaOficio = 'Modifica tu oficio/profesión';
   static const administraContrasena = 'Administra tu contraseña';
   static const acercaDe = 'Acerca de';

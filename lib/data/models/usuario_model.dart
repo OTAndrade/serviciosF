@@ -8,6 +8,7 @@ class UsuarioModel {
     this.ciudad,
     this.pais,
     this.instancia,
+    this.tipoUsuario,
     this.raw = const <String, dynamic>{},
   });
 
@@ -19,6 +20,7 @@ class UsuarioModel {
   final String? ciudad;
   final String? pais;
   final String? instancia;
+  final String? tipoUsuario;
   final Map<String, dynamic> raw;
 
   factory UsuarioModel.fromFirebase(String uid, Object? value) {
@@ -32,6 +34,7 @@ class UsuarioModel {
       ciudad: _asString(data['ciudad'] ?? data['Ciudad']),
       pais: _asString(data['pais'] ?? data['Pais']),
       instancia: _asString(data['instancia'] ?? data['Instancia']),
+      tipoUsuario: _asString(data['tipoUsuario'] ?? data['TipoUsuario']),
       raw: data,
     );
   }

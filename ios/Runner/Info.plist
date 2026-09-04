@@ -47,6 +47,8 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>iNeed necesita acceso a tus fotos para adjuntar el título, certificado o foto personal.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>iNeed necesita tu ubicación para buscar y atender servicios cercanos.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

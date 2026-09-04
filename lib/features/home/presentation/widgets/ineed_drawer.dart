@@ -37,21 +37,59 @@ class INeedDrawer extends ConsumerWidget {
                     title: const Text(AppStrings.buscarServicio),
                     onTap: () => _replace(context, AppRoutes.buscarServicio),
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.assignment_turned_in_outlined),
-                    title: const Text(AppStrings.atiendeSolicitudes),
-                    onTap: () => _replace(context, AppRoutes.atiendeSolicitudes),
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.help_outline),
-                    title: const Text(AppStrings.ayuda),
-                    onTap: () => _replace(context, AppRoutes.ayuda),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.work_outline),
-                    title: const Text(AppStrings.modificaOficio),
-                    onTap: () => _replace(context, AppRoutes.modificaOficio),
+                  ...usuario.maybeWhen(
+                    data: (profile) {
+                      final tipoUsuario = profile?.tipoUsuario?.trim() ?? '1';
+                      final esOfertante = tipoUsuario == '2';
+
+                      return <Widget>[
+                        if (esOfertante)
+                          ListTile(
+                            leading: const Icon(
+                              Icons.assignment_turned_in_outlined,
+                            ),
+                            title: const Text(AppStrings.atiendeSolicitudes),
+                            onTap: () => _replace(
+                              context,
+                              AppRoutes.atiendeSolicitudes,
+                            ),
+                          ),
+                        const Divider(),
+                        ListTile(
+                          leading: const Icon(Icons.help_outline),
+                          title: const Text(AppStrings.ayuda),
+                          onTap: () => _replace(context, AppRoutes.ayuda),
+                        ),
+                        if (esOfertante)
+                          ListTile(
+                            leading: const Icon(Icons.work_outline),
+                            title: const Text(AppStrings.modificaOficio),
+                            onTap: () => _replace(
+                              context,
+                              AppRoutes.modificaOficio,
+                            ),
+                          )
+                        else
+                          ListTile(
+                            leading: const Icon(
+                              Icons.person_add_alt_1_outlined,
+                            ),
+                            title: const Text(AppStrings.registraOficio),
+                            onTap: () => _replace(
+                              context,
+                              AppRoutes.registraOficio,
+                            ),
+                          ),
+                      ];
+                    },
+                    orElse: () => <Widget>[
+                      const Divider(),
+                      ListTile(
+                        leading: const Icon(Icons.help_outline),
+                        title: const Text(AppStrings.ayuda),
+                        onTap: () => _replace(context, AppRoutes.ayuda),
+                      ),
+                    ],
                   ),
                   ListTile(
                     leading: const Icon(Icons.password_outlined),

@@ -8,6 +8,49 @@ class OfertanteRepository {
 
   final RealtimeDatabaseService _database;
 
+  Future<OfertanteModel?> getByCiudadYUid({
+    required String ciudad,
+    required String uid,
+  }) async {
+    final ciudadNormalizada = ciudad.trim();
+    final uidNormalizado = uid.trim();
+
+    if (ciudadNormalizada.isEmpty || uidNormalizado.isEmpty) {
+      return null;
+    }
+
+    final path =
+        '${FirebasePaths.ofertantes}/$ciudadNormalizada/$uidNormalizado';
+    final snapshot = await _database.get(path);
+
+    if (!snapshot.exists || snapshot.value == null) {
+      return null;
+    }
+
+    return OfertanteModel.fromFirebase(
+      uidNormalizado,
+      snapshot.value,
+    );
+  }
+
+  Future<void> actualizarDatosServicio({
+    required String ciudad,
+    required String uid,
+    required Map<String, Object?> values,
+  }) async {
+    final ciudadNormalizada = ciudad.trim();
+    final uidNormalizado = uid.trim();
+
+    if (ciudadNormalizada.isEmpty || uidNormalizado.isEmpty) {
+      throw StateError('No se pudo identificar el registro del ofertante.');
+    }
+
+    final path =
+        '${FirebasePaths.ofertantes}/$ciudadNormalizada/$uidNormalizado';
+
+    await _database.update(path, values);
+  }
+
   /// Replica la consulta de la app Android original:
   /// Ofertantes/{Ciudad} y solo registros con Estado == "AC".
   Stream<List<OfertanteModel>> watchActivosPorCiudad(String ciudad) {
