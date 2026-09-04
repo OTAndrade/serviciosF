@@ -702,7 +702,7 @@ class _BuscarServicioMapScreenState
               bottom: 205,
               child: PointerInterceptor(
                 child: _SolicitudAceptadaInfoWindow(
-                  solicitud: solicitudAceptadaActiva!,
+                  solicitud: solicitudAceptadaActiva,
                   experiencia: _experienciaCalculada(solicitudAceptadaActiva),
                   fechaCitaTexto: _fechaCitaTexto(solicitudAceptadaActiva),
                   confirmando: _confirmandoSolicitud,
@@ -723,7 +723,7 @@ class _BuscarServicioMapScreenState
               bottom: 205,
               child: PointerInterceptor(
                 child: _SolicitudConfirmadaInfoWindow(
-                  solicitud: solicitudConfirmadaActiva!,
+                  solicitud: solicitudConfirmadaActiva,
                   experiencia:
                       _experienciaCalculada(solicitudConfirmadaActiva),
                   fechaCitaTexto:
@@ -1251,7 +1251,7 @@ class _SearchResults extends StatelessWidget {
           shrinkWrap: true,
           padding: EdgeInsets.zero,
           itemCount: items.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
+          separatorBuilder: (_, _) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final item = items[index];
             return ListTile(

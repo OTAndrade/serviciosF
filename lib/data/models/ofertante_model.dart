@@ -42,7 +42,7 @@ class OfertanteModel {
         value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
 
     String? asString(Object? raw) =>
-        raw == null ? null : raw.toString().trim();
+        raw?.toString().trim();
 
     return OfertanteModel(
       key: key,

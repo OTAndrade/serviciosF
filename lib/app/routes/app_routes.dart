@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../../features/atiende_solicitudes/presentation/atiende_solicitudes_map_screen.dart';
+import '../../features/ayuda/presentation/ayuda_screen.dart';
+import '../../features/administra_contrasena/presentation/administra_contrasena_screen.dart';
+import '../../features/acerca_de/presentation/acerca_de_screen.dart';
+import '../../features/terminos/presentation/terminos_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_shell_screen.dart';
 import '../../features/auth/presentation/phone_login_screen.dart';
@@ -29,6 +33,7 @@ class AppRoutes {
   static const modificaOficio = '/modifica-oficio';
   static const administraContrasena = '/administra-contrasena';
   static const acercaDe = '/acerca-de';
+  static const terminos = '/terminos';
 
   static Map<String, WidgetBuilder> get routes => {
         splash: (_) => const SplashScreen(),
@@ -39,22 +44,11 @@ class AppRoutes {
         phoneLogin: (_) => const PhoneLoginScreen(),
         buscarServicio: (_) => const BuscarServicioMapScreen(),
         atiendeSolicitudes: (_) => const AtiendeSolicitudesMapScreen(),
-        ayuda: (_) => const FeaturePlaceholderScreen(
-              title: AppStrings.ayuda,
-              description: 'La funcionalidad se migrará respetando la pantalla y el contenido de la aplicación original.',
-              icon: Icons.help_outline,
-            ),
+        ayuda: (_) => const AyudaScreen(),
         registraOficio: (_) => const RegistraOficioScreen(),
         modificaOficio: (_) => const ModificaOficioScreen(),
-        administraContrasena: (_) => const FeaturePlaceholderScreen(
-              title: AppStrings.administraContrasena,
-              description: 'Esta pantalla será migrada conservando el comportamiento actual de iNeed.',
-              icon: Icons.password_outlined,
-            ),
-        acercaDe: (_) => const FeaturePlaceholderScreen(
-              title: AppStrings.acercaDe,
-              description: 'Información de la aplicación iNeed. El contenido original será incorporado posteriormente.',
-              icon: Icons.info_outline,
-            ),
+        administraContrasena: (_) => const AdministraContrasenaScreen(),
+        acercaDe: (_) => const AcercaDeScreen(),
+        terminos: (_) => const TerminosScreen(),
       };
 }

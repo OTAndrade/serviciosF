@@ -52,5 +52,5 @@ class UsuarioModel {
     };
   }
 
-  static String? _asString(Object? value) => value == null ? null : value.toString();
+  static String? _asString(Object? value) => value?.toString();
 }

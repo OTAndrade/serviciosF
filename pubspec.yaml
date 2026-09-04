@@ -36,6 +36,9 @@ dependencies:
 
   # Utilitarios
   intl: ^0.20.2
+  package_info_plus: ^8.3.1
+  url_launcher: ^6.3.2
+  pdfrx: ^2.5.0
 
 dev_dependencies:
   flutter_test:

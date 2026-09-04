@@ -559,7 +559,7 @@ class _AtiendeSolicitudesMapScreenState
               bottom: 100,
               child: PointerInterceptor(
                 child: _SolicitudRecibidaInfoWindow(
-                  bandeja: solicitudRecibidaActiva!,
+                  bandeja: solicitudRecibidaActiva,
                   onClose: () {
                     setState(() {
                       _solicitudRecibidaSeleccionada = null;
@@ -585,7 +585,7 @@ class _AtiendeSolicitudesMapScreenState
               bottom: 100,
               child: PointerInterceptor(
                 child: _SolicitudAceptadaInfoWindow(
-                  bandeja: solicitudAceptadaActiva!,
+                  bandeja: solicitudAceptadaActiva,
                   onClose: () {
                     setState(() {
                       _solicitudAceptadaSeleccionada = null;
@@ -602,7 +602,7 @@ class _AtiendeSolicitudesMapScreenState
               bottom: 100,
               child: PointerInterceptor(
                 child: _SolicitudConfirmadaInfoWindow(
-                  bandeja: solicitudConfirmadaActiva!,
+                  bandeja: solicitudConfirmadaActiva,
                   onClose: () {
                     setState(() {
                       _solicitudConfirmadaSeleccionada = null;
@@ -955,7 +955,7 @@ class _HistorialPanel extends StatelessWidget {
             child: ListView.separated(
               padding: EdgeInsets.zero,
               itemCount: items.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) =>
                   _HistorialItem(bandeja: items[index]),
             ),

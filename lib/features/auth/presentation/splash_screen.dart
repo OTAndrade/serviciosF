@@ -63,7 +63,7 @@ class SplashScreen extends ConsumerWidget {
           Text(
             authState.maybeWhen(
               loading: () => 'Validando sesión...',
-              error: (_, __) => 'No se pudo validar la sesión.',
+              error: (_, _) => 'No se pudo validar la sesión.',
               data: (_) => 'Iniciando iNeed...',
               orElse: () => 'Iniciando iNeed...',
             ),

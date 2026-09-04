@@ -104,6 +104,65 @@ class AuthService {
     _googleInitialized = true;
   }
 
+  List<String> currentProviderIds() {
+    final user = _auth.currentUser;
+    if (user == null) return const <String>[];
+
+    return user.providerData
+        .map((provider) => provider.providerId)
+        .where((providerId) => providerId.trim().isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const AuthPasswordChangeException(
+        'No existe un usuario autenticado.',
+      );
+    }
+
+    final email = user.email?.trim() ?? '';
+    if (email.isEmpty) {
+      throw const AuthPasswordChangeException(
+        'El usuario no tiene un correo electrónico asociado.',
+      );
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: currentPassword,
+    );
+
+    try {
+      await user.reauthenticateWithCredential(credential);
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'wrong-password' ||
+          error.code == 'invalid-credential' ||
+          error.code == 'user-mismatch') {
+        throw const AuthPasswordChangeException(
+          'Error en la contraseña actual.',
+        );
+      }
+      rethrow;
+    }
+
+    try {
+      await user.updatePassword(newPassword);
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'weak-password') {
+        throw const AuthPasswordChangeException(
+          'Contraseña demasiado corta, ingrese un mínimo de 6 caracteres.',
+        );
+      }
+      rethrow;
+    }
+  }
+
   Future<void> signOut() async {
     await _auth.signOut();
 
@@ -129,6 +188,16 @@ class FacebookAuthCancelledException implements Exception {
 
 class FacebookAuthFlowException implements Exception {
   const FacebookAuthFlowException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+
+class AuthPasswordChangeException implements Exception {
+  const AuthPasswordChangeException(this.message);
 
   final String message;
 

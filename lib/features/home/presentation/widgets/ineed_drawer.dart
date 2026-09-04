@@ -144,7 +144,7 @@ class _DrawerHeader extends StatelessWidget {
           height: 92,
           child: Center(child: CircularProgressIndicator()),
         ),
-        error: (_, __) => Column(
+        error: (_, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Image.asset(AppAssets.logoSin, height: 52, fit: BoxFit.contain),

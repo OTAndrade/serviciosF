@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/routes/app_routes.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../shared/widgets/auth_feedback_listener.dart';
 import '../../../shared/widgets/auth_text_field.dart';
@@ -20,6 +21,7 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  bool _aceptaTerminos = false;
 
   @override
   void dispose() {
@@ -84,7 +86,46 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
                     obscureText: true,
                     validator: _confirmPassword,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    value: _aceptaTerminos,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    onChanged: state.isLoading
+                        ? null
+                        : (value) {
+                            setState(() {
+                              _aceptaTerminos = value ?? false;
+                            });
+                          },
+                    title: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Text('Estoy de acuerdo con los '),
+                        TextButton(
+                          onPressed: state.isLoading
+                              ? null
+                              : () {
+                                  Navigator.of(context).pushNamed(
+                                    AppRoutes.terminos,
+                                  );
+                                },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 36),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Términos y Condiciones y Política de Privacidad.',
+                            style: TextStyle(
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -107,6 +148,17 @@ class _RegisterUserScreenState extends ConsumerState<RegisterUserScreen> {
   }
 
   Future<void> _register() async {
+    if (!_aceptaTerminos) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Debe aceptar los Términos y Condiciones y Política de Privacidad.',
+          ),
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
     await ref.read(authControllerProvider.notifier).registerWithEmail(
           name: _nameController.text,
