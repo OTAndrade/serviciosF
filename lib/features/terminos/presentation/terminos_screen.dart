@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pdfrx/pdfrx.dart';
+import 'widgets/terminos_pdf_viewer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../data/repositories/terminos_repository.dart';
@@ -91,12 +91,7 @@ class _TerminosScreenState extends State<TerminosScreen> {
       );
     }
 
-    // Equivalente funcional a PDFView.fromStream() de Android:
-    // el PDF remoto se visualiza dentro de iNeed.
-    return PdfViewer.uri(
-      uri,
-      useProgressiveLoading: true,
-    );
+    return TerminosPdfViewer(url: url);
   }
 }
 

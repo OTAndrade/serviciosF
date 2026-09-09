@@ -9,6 +9,7 @@ class AuthTextField extends StatelessWidget {
     this.keyboardType,
     this.obscureText = false,
     this.validator,
+    this.enabled = true,
   });
 
   final TextEditingController controller;
@@ -17,6 +18,7 @@ class AuthTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool obscureText;
   final String? Function(String?)? validator;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +27,7 @@ class AuthTextField extends StatelessWidget {
       keyboardType: keyboardType,
       obscureText: obscureText,
       validator: validator,
+      enabled: enabled,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: icon == null ? null : Icon(icon),

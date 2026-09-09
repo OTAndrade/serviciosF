@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
@@ -8,6 +10,9 @@ class AuthService {
       : _auth = firebaseAuth ?? FirebaseAuth.instance;
 
   final FirebaseAuth _auth;
+
+  String? _phoneVerificationId;
+  ConfirmationResult? _phoneConfirmationResult;
 
   static const String _googleWebClientId =
       '1022994478603-93hof6jsgo1981b565gn6ap8te0okp3d.apps.googleusercontent.com';
@@ -40,6 +45,90 @@ class AuthService {
 
   Future<void> sendPasswordResetEmail(String email) {
     return _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  Future<PhoneVerificationStartResult> startPhoneVerification(
+    String phoneNumber,
+  ) async {
+    final normalized = phoneNumber.trim();
+
+    if (kIsWeb) {
+      final confirmation = await _auth.signInWithPhoneNumber(normalized);
+      _phoneConfirmationResult = confirmation;
+      return const PhoneVerificationStartResult.codeSent();
+    }
+
+    final completer = Completer<PhoneVerificationStartResult>();
+
+    await _auth.verifyPhoneNumber(
+      phoneNumber: normalized,
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        try {
+          final result = await _auth.signInWithCredential(credential);
+          if (!completer.isCompleted) {
+            completer.complete(
+              PhoneVerificationStartResult.autoVerified(result),
+            );
+          }
+        } catch (error, stackTrace) {
+          if (!completer.isCompleted) {
+            completer.completeError(error, stackTrace);
+          }
+        }
+      },
+      verificationFailed: (FirebaseAuthException error) {
+        if (!completer.isCompleted) {
+          completer.completeError(error);
+        }
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        _phoneVerificationId = verificationId;
+        if (!completer.isCompleted) {
+          completer.complete(
+            const PhoneVerificationStartResult.codeSent(),
+          );
+        }
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+        _phoneVerificationId = verificationId;
+      },
+    );
+
+    return completer.future;
+  }
+
+  Future<UserCredential> confirmPhoneCode(String smsCode) async {
+    final code = smsCode.trim();
+
+    if (kIsWeb) {
+      final confirmation = _phoneConfirmationResult;
+      if (confirmation == null) {
+        throw const PhoneAuthFlowException(
+          'Código inválido o no fue enviado.',
+        );
+      }
+      return confirmation.confirm(code);
+    }
+
+    final verificationId = _phoneVerificationId;
+    if (verificationId == null || verificationId.isEmpty) {
+      throw const PhoneAuthFlowException(
+        'Código inválido o no fue enviado.',
+      );
+    }
+
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: code,
+    );
+
+    return _auth.signInWithCredential(credential);
+  }
+
+  void clearPhoneVerification() {
+    _phoneVerificationId = null;
+    _phoneConfirmationResult = null;
   }
 
   Future<UserCredential> signInWithGoogle() async {
@@ -180,6 +269,37 @@ class AuthService {
       }
     }
   }
+}
+
+class PhoneVerificationStartResult {
+  const PhoneVerificationStartResult._({
+    required this.codeSent,
+    this.credential,
+  });
+
+  const PhoneVerificationStartResult.codeSent()
+      : this._(codeSent: true);
+
+  const PhoneVerificationStartResult.autoVerified(
+    UserCredential credential,
+  ) : this._(
+          codeSent: false,
+          credential: credential,
+        );
+
+  final bool codeSent;
+  final UserCredential? credential;
+
+  bool get autoVerified => credential != null;
+}
+
+class PhoneAuthFlowException implements Exception {
+  const PhoneAuthFlowException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }
 
 class FacebookAuthCancelledException implements Exception {
