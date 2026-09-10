@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_navigation_service.dart';
 import 'routes/app_routes.dart';
 import 'theme/app_theme.dart';
 
@@ -9,6 +10,7 @@ class INeedApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: AppNavigationService.navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'iNeed',
       theme: AppTheme.light,

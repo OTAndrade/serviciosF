@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/repositories/usuario_repository.dart';
 import '../../../data/services/auth_service.dart';
+import '../../../data/services/notification_token_service.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 final usuarioRepositoryProvider = Provider<UsuarioRepository>((ref) => UsuarioRepository());
@@ -134,6 +135,10 @@ class AuthController extends Notifier<AuthFormState> {
   }
 
   Future<void> signOut() async {
+    // Limpia la asociación usuario -> dispositivo ANTES de cerrar Firebase
+    // Auth. No elimina el token FCM del dispositivo; podrá reutilizarse al
+    // iniciar sesión con otro usuario en la misma instalación.
+    await NotificationTokenService.clearCurrentUserToken();
     await _authService.signOut();
   }
 

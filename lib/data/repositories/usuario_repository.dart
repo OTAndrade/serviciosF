@@ -24,6 +24,27 @@ class UsuarioRepository {
     await _usuariosRef().child(uid).update(values);
   }
 
+  Future<void> updateTokenMsg({
+    required String uid,
+    required String token,
+  }) async {
+    final userId = uid.trim();
+    final value = token.trim();
+
+    if (userId.isEmpty || value.isEmpty) return;
+
+    await _usuariosRef().child(userId).child('tokenMsg').set(value);
+  }
+
+  Future<void> clearTokenMsg({
+    required String uid,
+  }) async {
+    final userId = uid.trim();
+    if (userId.isEmpty) return;
+
+    await _usuariosRef().child(userId).child('tokenMsg').set('');
+  }
+
   Stream<UsuarioModel?> watchByUid(String uid) {
     return _usuariosRef().child(uid).onValue.map((event) {
       final snapshot = event.snapshot;
