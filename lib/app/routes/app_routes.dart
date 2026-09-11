@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/app_strings.dart';
 import '../../features/atiende_solicitudes/presentation/atiende_solicitudes_map_screen.dart';
 import '../../features/ayuda/presentation/ayuda_screen.dart';
 import '../../features/administra_contrasena/presentation/administra_contrasena_screen.dart';
@@ -15,7 +14,6 @@ import '../../features/buscar_servicio/presentation/buscar_servicio_map_screen.d
 import '../../features/home/presentation/home_shell_screen.dart';
 import '../../features/modifica_oficio/presentation/modifica_oficio_screen.dart';
 import '../../features/registra_oficio/presentation/registra_oficio_screen.dart';
-import '../../features/soporte/presentation/feature_placeholder_screen.dart';
 
 class AppRoutes {
   const AppRoutes._();
