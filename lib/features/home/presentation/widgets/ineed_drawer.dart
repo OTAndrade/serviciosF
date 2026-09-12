@@ -109,16 +109,12 @@ class INeedDrawer extends ConsumerWidget {
               leading: const Icon(Icons.logout),
               title: const Text(AppStrings.cerrarSesion),
               onTap: () async {
-                Navigator.pop(context);
+                // Cerrar el Drawer local. La navegación posterior al Login
+                // pertenece al guard global de autenticación de INeedApp.
+                Navigator.of(context).pop();
+
                 await ref.read(authControllerProvider.notifier).signOut();
                 ref.invalidate(currentUsuarioProvider);
-                if (context.mounted) {
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    AppRoutes.login,
-                    (_) => false,
-                  );
-                }
               },
             ),
           ],

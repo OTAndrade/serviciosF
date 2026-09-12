@@ -1,0 +1,18 @@
+{
+  "name": "ineed-functions",
+  "description": "Backend Firebase Cloud Functions para notificaciones de negocio de iNeed",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions,database",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "firebase-admin": "14.4.0",
+    "firebase-functions": "7.3.2"
+  }
+}

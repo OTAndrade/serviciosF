@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../../app/app_navigation_service.dart';
@@ -18,28 +17,26 @@ const AndroidNotificationChannel _ineedChannel = AndroidNotificationChannel(
 final FlutterLocalNotificationsPlugin _localNotifications =
     FlutterLocalNotificationsPlugin();
 
+bool _localNotificationsReady = false;
+
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint(
-    '[FCM] onBackgroundMessage id=${message.messageId} '
-    'notification=${message.notification != null} data=${message.data}',
-  );
-
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Cuando FCM ya trae payload "notification", Android/iOS lo muestra
-  // automáticamente en background. Solo generamos local notification para
-  // mensajes data-only, evitando duplicados.
+  // Los mensajes con payload notification los presenta el sistema en
+  // background. Para data-only se genera una notificación local.
   if (message.notification == null) {
-    await _initializeLocalNotifications();
+    await _ensureLocalNotifications();
     await _showLocalNotification(message);
   }
 }
 
-Future<void> _initializeLocalNotifications() async {
-  const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+Future<void> _ensureLocalNotifications() async {
+  if (_localNotificationsReady) return;
+
+  const android = AndroidInitializationSettings('@drawable/ic_notification');
   const ios = DarwinInitializationSettings();
 
   const settings = InitializationSettings(
@@ -59,13 +56,13 @@ Future<void> _initializeLocalNotifications() async {
           AndroidFlutterLocalNotificationsPlugin>();
 
   await androidPlugin?.createNotificationChannel(_ineedChannel);
+  _localNotificationsReady = true;
 }
 
 Future<void> _showLocalNotification(RemoteMessage message) async {
   final notification = message.notification;
-  final title = notification?.title ??
-      message.data['title']?.toString() ??
-      'iNeed';
+  final title =
+      notification?.title ?? message.data['title']?.toString() ?? 'iNeed';
   final body = notification?.body ??
       message.data['body']?.toString() ??
       message.data['message']?.toString() ??
@@ -98,61 +95,71 @@ class NotificationMessageService {
 
   static StreamSubscription<RemoteMessage>? _foregroundSubscription;
   static StreamSubscription<RemoteMessage>? _openedSubscription;
+
+  static bool _backgroundHandlerRegistered = false;
   static bool _initialized = false;
 
-  static Future<void> initialize() async {
-    if (_initialized) return;
-    _initialized = true;
-
-    debugPrint('[FCM] NotificationMessageService.initialize');
+  /// Debe llamarse después de Firebase.initializeApp() y antes de runApp().
+  /// No realiza I/O ni espera ninguna operación de red.
+  static void registerBackgroundHandler() {
+    if (_backgroundHandlerRegistered) return;
+    _backgroundHandlerRegistered = true;
 
     FirebaseMessaging.onBackgroundMessage(
       firebaseMessagingBackgroundHandler,
     );
+  }
 
-    await _initializeLocalNotifications();
+  /// Registra listeners inmediatamente. Las tareas que pueden tardar
+  /// (notificaciones locales/getInitialMessage) quedan en segundo plano.
+  static Future<void> initialize() async {
+    if (_initialized) return;
+    _initialized = true;
 
-    // Foreground:
-    // Android no muestra automáticamente notification payload, por lo que
-    // generamos una notificación local.
-    // En iOS Firebase usa setForegroundNotificationPresentationOptions()
-    // configurado en NotificationTokenService.
+    registerBackgroundHandler();
+
     _foregroundSubscription =
         FirebaseMessaging.onMessage.listen((message) async {
-      debugPrint(
-        '[FCM] onMessage id=${message.messageId} '
-        'title=${message.notification?.title} '
-        'body=${message.notification?.body} data=${message.data}',
-      );
+      if (message.notification == null && message.data.isEmpty) return;
 
-      if (message.notification != null || message.data.isNotEmpty) {
+      try {
+        await _ensureLocalNotifications();
         await _showLocalNotification(message);
+      } catch (_) {
+        // Una falla de notificación local no debe afectar la app.
       }
     });
 
-    // App estaba en background y el usuario tocó la notificación.
     _openedSubscription =
         FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      debugPrint(
-        '[FCM] onMessageOpenedApp id=${message.messageId} '
-        'data=${message.data}',
-      );
       AppNavigationService.openHome();
     });
 
-    // App estaba terminada y fue abierta tocando una notificación.
-    final initialMessage =
-        await FirebaseMessaging.instance.getInitialMessage();
+    unawaited(_initializeLocalNotificationsSafely());
+    unawaited(_processInitialMessage());
+  }
 
-    if (initialMessage != null) {
-      debugPrint(
-        '[FCM] getInitialMessage id=${initialMessage.messageId} '
-        'data=${initialMessage.data}',
-      );
-      // Espera a que MaterialApp tenga Navigator disponible.
+  static Future<void> _initializeLocalNotificationsSafely() async {
+    try {
+      await _ensureLocalNotifications();
+    } catch (_) {
+      // Se reintentará automáticamente cuando llegue un mensaje foreground.
+    }
+  }
+
+  static Future<void> _processInitialMessage() async {
+    try {
+      final initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
+
+      if (initialMessage == null) return;
+
+      // Esperar a que MaterialApp/Navigator estén montados.
       Timer(const Duration(milliseconds: 600), () {
         AppNavigationService.openHome();
       });
+    } catch (_) {
+      // No bloquear ni afectar el arranque.
     }
   }
 }

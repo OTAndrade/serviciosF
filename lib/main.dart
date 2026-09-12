@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,10 +13,9 @@ Future<void> main() async {
   final firebaseStatus = await FirebaseBootstrapService.initialize();
 
   if (firebaseStatus.initialized) {
-    // Registrar primero los receptores FCM. La escritura de tokenMsg en
-    // Realtime Database no debe bloquear la capacidad de recibir mensajes.
-    await NotificationMessageService.initialize();
-    await NotificationTokenService.initialize();
+    // Registro síncrono y ligero requerido para mensajes background.
+    // No realiza llamadas de red ni retrasa la primera pantalla.
+    NotificationMessageService.registerBackgroundHandler();
   }
 
   runApp(
@@ -25,4 +26,24 @@ Future<void> main() async {
       child: const INeedApp(),
     ),
   );
+
+  if (firebaseStatus.initialized) {
+    // Todo lo no esencial para pintar la primera pantalla se inicializa
+    // después de runApp y nunca bloquea el arranque.
+    unawaited(_initializeBackgroundServices());
+  }
+}
+
+Future<void> _initializeBackgroundServices() async {
+  try {
+    await NotificationMessageService.initialize();
+  } catch (_) {
+    // FCM no es una dependencia crítica para abrir iNeed.
+  }
+
+  try {
+    await NotificationTokenService.initialize();
+  } catch (_) {
+    // La app continúa aunque FCM/Google Play Services estén indisponibles.
+  }
 }

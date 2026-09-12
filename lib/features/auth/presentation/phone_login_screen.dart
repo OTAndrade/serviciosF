@@ -176,7 +176,7 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
 
     if (!mounted) return;
 
-    if (existing != null) {
+    if (existing != null && existing.tienePerfilBaseCompleto) {
       ref.invalidate(currentUsuarioProvider);
 
       Navigator.of(context).pushNamedAndRemoveUntil(
@@ -246,21 +246,18 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
         // El token FCM se completará también en el módulo de notificaciones.
       }
 
-      await ref.read(usuarioRepositoryProvider).createOrUpdateUser(
+      await ref.read(usuarioRepositoryProvider).saveBaseProfile(
         uid: user.uid,
-        values: <String, dynamic>{
-          'pais': _countryCode.replaceFirst('+', ''),
-          'ciudad': ciudad,
-          'instancia': _localPhone,
-          'email': email,
-          'tipoUsuario': '1',
-          'estado': 'AC',
-          'nombre': nombre,
-          'pass': 'Telefono',
-          'fbUid': user.uid,
-          if (tokenMsg != null && tokenMsg.trim().isNotEmpty)
-            'tokenMsg': tokenMsg.trim(),
-        },
+        pais: _countryCode,
+        ciudad: ciudad,
+        instancia: _localPhone,
+        email: email,
+        tipoUsuario: '1',
+        estado: 'AC',
+        nombre: nombre,
+        pass: 'Telefono',
+        fbUid: user.uid,
+        tokenMsg: tokenMsg,
       );
 
       ref.read(authServiceProvider).clearPhoneVerification();

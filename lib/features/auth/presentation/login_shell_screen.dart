@@ -6,6 +6,7 @@ import '../../../core/constants/app_assets.dart';
 import '../../../shared/widgets/auth_feedback_listener.dart';
 import '../../../shared/widgets/auth_text_field.dart';
 import '../application/auth_providers.dart';
+import 'complete_user_profile_screen.dart';
 
 class LoginShellScreen extends ConsumerStatefulWidget {
   const LoginShellScreen({super.key});
@@ -30,16 +31,6 @@ class _LoginShellScreenState extends ConsumerState<LoginShellScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
 
-    ref.listen(authStateChangesProvider, (_, next) {
-      next.whenData((user) {
-        if (user == null || !context.mounted) return;
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.home,
-          (_) => false,
-        );
-      });
-    });
 
     return AuthFeedbackListener(
       child: Scaffold(
@@ -140,18 +131,56 @@ class _LoginShellScreenState extends ConsumerState<LoginShellScreen> {
 
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
+
     await ref.read(authControllerProvider.notifier).signInWithEmail(
           email: _emailController.text,
           password: _passwordController.text,
         );
+
+    if (!mounted || ref.read(authControllerProvider).error != null) return;
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      AppRoutes.home,
+      (route) => false,
+    );
   }
 
   Future<void> _signInWithGoogle() async {
     await ref.read(authControllerProvider.notifier).signInWithGoogle();
+    await _continuarIngresoSocial();
   }
 
   Future<void> _signInWithFacebook() async {
     await ref.read(authControllerProvider.notifier).signInWithFacebook();
+    await _continuarIngresoSocial();
+  }
+
+  Future<void> _continuarIngresoSocial() async {
+    if (!mounted || ref.read(authControllerProvider).error != null) return;
+
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user == null) return;
+
+    final completo = await ref
+        .read(usuarioRepositoryProvider)
+        .hasCompleteBaseProfile(user.uid);
+
+    if (!mounted) return;
+
+    if (completo) {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.home,
+        (route) => false,
+      );
+      return;
+    }
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (_) => const CompleteUserProfileScreen(),
+      ),
+      (route) => false,
+    );
   }
 
 
