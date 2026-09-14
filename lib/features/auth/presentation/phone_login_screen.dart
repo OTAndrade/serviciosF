@@ -180,7 +180,7 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
       ref.invalidate(currentUsuarioProvider);
 
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.home,
+        AppRoutes.buscarServicio,
         (route) => false,
       );
       return;
@@ -266,7 +266,7 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
       if (!mounted) return;
 
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.home,
+        AppRoutes.buscarServicio,
         (route) => false,
       );
     } catch (error) {

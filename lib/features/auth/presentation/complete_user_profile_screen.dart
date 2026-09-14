@@ -154,7 +154,7 @@ class _CompleteUserProfileScreenState
 
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.home,
+        AppRoutes.buscarServicio,
         (route) => false,
       );
     } catch (error) {

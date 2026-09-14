@@ -11,7 +11,6 @@ import '../../features/auth/presentation/phone_login_screen.dart';
 import '../../features/auth/presentation/register_user_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/buscar_servicio/presentation/buscar_servicio_map_screen.dart';
-import '../../features/home/presentation/home_shell_screen.dart';
 import '../../features/modifica_oficio/presentation/modifica_oficio_screen.dart';
 import '../../features/registra_oficio/presentation/registra_oficio_screen.dart';
 
@@ -19,7 +18,6 @@ class AppRoutes {
   const AppRoutes._();
 
   static const splash = '/';
-  static const home = '/home';
   static const login = '/login';
   static const register = '/register';
   static const forgotPassword = '/forgot-password';
@@ -35,7 +33,6 @@ class AppRoutes {
 
   static Map<String, WidgetBuilder> get routes => {
         splash: (_) => const SplashScreen(),
-        home: (_) => const HomeShellScreen(),
         login: (_) => const LoginShellScreen(),
         register: (_) => const RegisterUserScreen(),
         forgotPassword: (_) => const ForgotPasswordScreen(),

@@ -36,6 +36,7 @@ class INeedApp extends ConsumerWidget {
 
     return MaterialApp(
       navigatorKey: AppNavigationService.navigatorKey,
+      navigatorObservers: [AppNavigationService.navigatorObserver],
       debugShowCheckedModeBanner: false,
       title: 'iNeed',
       theme: AppTheme.light,

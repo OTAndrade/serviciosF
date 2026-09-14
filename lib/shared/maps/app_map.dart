@@ -15,6 +15,7 @@ class AppMap extends StatefulWidget {
     this.onTap,
     this.myLocationEnabled = true,
     this.showCurrentLocationButton = true,
+    this.locationReady,
     this.eagerGestureRecognition = false,
     super.key,
   });
@@ -26,6 +27,10 @@ class AppMap extends StatefulWidget {
   final ValueChanged<LatLng>? onTap;
   final bool myLocationEnabled;
   final bool showCurrentLocationButton;
+
+  /// Si se informa, la pantalla padre administra la resolución de
+  /// ubicación y AppMap no hace una segunda consulta al iniciar.
+  final bool? locationReady;
 
   /// Hace que el mapa capture los gestos antes que un scroll contenedor.
   /// Útil cuando AppMap está dentro de un formulario desplazable.
@@ -44,7 +49,9 @@ class _AppMapState extends State<AppMap> {
   @override
   void initState() {
     super.initState();
-    _prepareLocation();
+    if (widget.locationReady == null) {
+      _prepareLocation();
+    }
   }
 
   Future<void> _prepareLocation() async {
@@ -84,7 +91,8 @@ class _AppMapState extends State<AppMap> {
           markers: widget.markers,
           circles: widget.circles,
           onTap: widget.onTap,
-          myLocationEnabled: widget.myLocationEnabled && _locationReady,
+          myLocationEnabled: widget.myLocationEnabled &&
+              (widget.locationReady == true || _locationReady),
           myLocationButtonEnabled: false,
           zoomControlsEnabled: false,
           gestureRecognizers: widget.eagerGestureRecognition

@@ -140,7 +140,7 @@ class _LoginShellScreenState extends ConsumerState<LoginShellScreen> {
     if (!mounted || ref.read(authControllerProvider).error != null) return;
 
     Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRoutes.home,
+      AppRoutes.buscarServicio,
       (route) => false,
     );
   }
@@ -169,7 +169,7 @@ class _LoginShellScreenState extends ConsumerState<LoginShellScreen> {
 
     if (completo) {
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.home,
+        AppRoutes.buscarServicio,
         (route) => false,
       );
       return;

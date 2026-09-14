@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -18,6 +20,7 @@ import '../../../shared/maps/marker_icon_registry.dart';
 import '../application/buscar_servicio_providers.dart';
 import '../application/enviar_solicitudes_service.dart';
 import '../application/confirmar_solicitud_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 class BuscarServicioMapScreen extends ConsumerStatefulWidget {
   const BuscarServicioMapScreen({super.key});
@@ -66,12 +69,11 @@ class _BuscarServicioMapScreenState
     _prepararMapa();
   }
 
-  Future<void> _prepararMapa() async {
-    await Future.wait([
-      _cargarUbicacionSolicitante(),
-      _cargarIconoOfertante(),
-      _cargarIconosSolicitudes(),
-    ]);
+  void _prepararMapa() {
+    // Ninguna de estas tareas bloquea el primer render del mapa.
+    unawaited(_cargarUbicacionSolicitante());
+    unawaited(_cargarIconoOfertante());
+    unawaited(_cargarIconosSolicitudes());
   }
 
   Future<void> _cargarIconoOfertante() async {
@@ -102,23 +104,74 @@ class _BuscarServicioMapScreenState
   }
 
   Future<void> _cargarUbicacionSolicitante() async {
+    bool tieneUbicacionUtil = false;
+
+    // 1) Posición rápida: usar primero lo que Android ya conoce.
     try {
-      final position = await _locationService.currentPosition();
-      final ubicacion = LatLng(position.latitude, position.longitude);
+      final cached = await _locationService.lastKnownPosition();
 
+      if (cached != null && mounted) {
+        tieneUbicacionUtil = true;
+        await _aplicarUbicacionSolicitante(
+          cached,
+          moverCamara: true,
+        );
+
+        // El mapa ya está utilizable; la posición actual seguirá llegando
+        // en segundo plano.
+        if (mounted) {
+          setState(() => _cargandoUbicacion = false);
+        }
+      }
+    } catch (_) {
+      // currentPosition() manejará el error definitivo. Una falla al leer
+      // caché no debe impedir intentar obtener la ubicación actual.
+    }
+
+    // 2) Posición actual: refina la ubicación sin bloquear la pantalla.
+    try {
+      final current = await _locationService.currentPosition();
       if (!mounted) return;
-      setState(() {
-        _ubicacionSolicitante = ubicacion;
-        _cargandoUbicacion = false;
-      });
 
+      await _aplicarUbicacionSolicitante(
+        current,
+        moverCamara: true,
+      );
+
+      if (mounted && _cargandoUbicacion) {
+        setState(() => _cargandoUbicacion = false);
+      }
+    } catch (error) {
+      if (!mounted) return;
+
+      if (_cargandoUbicacion) {
+        setState(() => _cargandoUbicacion = false);
+      }
+
+      // Si ya pudimos usar una ubicación cacheada, no bloquear la experiencia
+      // con un error posterior de refinamiento.
+      if (!tieneUbicacionUtil) {
+        AppSnackbar.show(context, error.toString(), isError: true);
+      }
+    }
+  }
+
+  Future<void> _aplicarUbicacionSolicitante(
+    Position position, {
+    required bool moverCamara,
+  }) async {
+    final ubicacion = LatLng(position.latitude, position.longitude);
+
+    if (!mounted) return;
+
+    setState(() {
+      _ubicacionSolicitante = ubicacion;
+    });
+
+    if (moverCamara) {
       await _mapController?.animateCamera(
         CameraUpdate.newLatLngZoom(ubicacion, 15),
       );
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _cargandoUbicacion = false);
-      AppSnackbar.show(context, error.toString(), isError: true);
     }
   }
 
@@ -669,6 +722,7 @@ class _BuscarServicioMapScreenState
             initialCameraPosition: _initialCameraPosition,
             markers: markers,
             circles: _searchCircle,
+            locationReady: _ubicacionSolicitante != null,
             onMapCreated: (controller) async {
               _mapController = controller;
               final ubicacion = _ubicacionSolicitante;

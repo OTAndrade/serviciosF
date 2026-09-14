@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/app_navigation_service.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -12,11 +13,16 @@ class INeedDrawer extends ConsumerWidget {
   const INeedDrawer({super.key});
 
   Future<void> _replace(BuildContext context, String route) async {
-    final navigator = Navigator.of(context);
     final currentRoute = ModalRoute.of(context)?.settings.name;
-    navigator.pop();
+
+    // Cerrar primero el Drawer local.
+    Navigator.of(context).pop();
+
     if (currentRoute == route) return;
-    await navigator.pushReplacementNamed(route);
+
+    // Buscar Servicio es la raíz autenticada. Cualquier opción secundaria
+    // queda por encima para que Atrás vuelva siempre a Buscar Servicio.
+    AppNavigationService.openAuthenticatedRoute(route);
   }
 
   @override

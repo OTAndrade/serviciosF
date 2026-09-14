@@ -48,7 +48,9 @@ class SplashScreen extends ConsumerWidget {
     authState.whenData((user) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
-        Navigator.of(context).pushReplacementNamed(user == null ? AppRoutes.login : AppRoutes.home);
+        Navigator.of(context).pushReplacementNamed(
+          user == null ? AppRoutes.login : AppRoutes.buscarServicio,
+        );
       });
     });
 

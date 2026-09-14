@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -33,6 +34,72 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
+
+void _openDestinationForData(Map<String, dynamic> data) {
+  final tipoEvento = data['tipoEvento']?.toString().trim() ?? '';
+
+  switch (tipoEvento) {
+    case 'SOLICITUD_ELABORADA':
+    case 'SOLICITUD_CONFIRMADA':
+      AppNavigationService.openAtiendeSolicitudes();
+      break;
+
+    case 'SOLICITUD_ACEPTADA':
+      AppNavigationService.openBuscarServicio();
+      break;
+
+    default:
+      AppNavigationService.openBuscarServicio();
+      break;
+  }
+}
+
+
+void _queueDestinationForColdStart(Map<String, dynamic> data) {
+  final tipoEvento = data['tipoEvento']?.toString().trim() ?? '';
+
+  switch (tipoEvento) {
+    case 'SOLICITUD_ELABORADA':
+    case 'SOLICITUD_CONFIRMADA':
+      AppNavigationService.queueAtiendeSolicitudes();
+      break;
+
+    case 'SOLICITUD_ACEPTADA':
+      AppNavigationService.queueBuscarServicio();
+      break;
+
+    default:
+      AppNavigationService.queueBuscarServicio();
+      break;
+  }
+}
+
+void _openDestinationFromPayload(String? payload) {
+  if (payload == null || payload.trim().isEmpty) {
+    AppNavigationService.openBuscarServicio();
+    return;
+  }
+
+  try {
+    final decoded = jsonDecode(payload);
+    if (decoded is Map<String, dynamic>) {
+      _openDestinationForData(decoded);
+      return;
+    }
+
+    if (decoded is Map) {
+      _openDestinationForData(
+        decoded.map((key, value) => MapEntry(key.toString(), value)),
+      );
+      return;
+    }
+  } catch (_) {
+    // Fallback seguro para notificaciones antiguas o payload inválido.
+  }
+
+  AppNavigationService.openBuscarServicio();
+}
+
 Future<void> _ensureLocalNotifications() async {
   if (_localNotificationsReady) return;
 
@@ -46,8 +113,8 @@ Future<void> _ensureLocalNotifications() async {
 
   await _localNotifications.initialize(
     settings,
-    onDidReceiveNotificationResponse: (_) {
-      AppNavigationService.openHome();
+    onDidReceiveNotificationResponse: (response) {
+      _openDestinationFromPayload(response.payload);
     },
   );
 
@@ -87,6 +154,7 @@ Future<void> _showLocalNotification(RemoteMessage message) async {
       android: androidDetails,
       iOS: iosDetails,
     ),
+    payload: jsonEncode(message.data),
   );
 }
 
@@ -132,7 +200,7 @@ class NotificationMessageService {
 
     _openedSubscription =
         FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      AppNavigationService.openHome();
+      _openDestinationForData(message.data);
     });
 
     unawaited(_initializeLocalNotificationsSafely());
@@ -154,10 +222,10 @@ class NotificationMessageService {
 
       if (initialMessage == null) return;
 
-      // Esperar a que MaterialApp/Navigator estén montados.
-      Timer(const Duration(milliseconds: 600), () {
-        AppNavigationService.openHome();
-      });
+      // Arranque en frío: NO navegar por temporizador.
+      // Splash resuelve la sesión normalmente. Cuando Home sea montado,
+      // AppNavigationService.navigatorObserver consumirá este destino.
+      _queueDestinationForColdStart(initialMessage.data);
     } catch (_) {
       // No bloquear ni afectar el arranque.
     }

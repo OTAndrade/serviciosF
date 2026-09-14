@@ -374,7 +374,7 @@ class _RegistraOficioScreenState extends ConsumerState<RegistraOficioScreen> {
       // Igual que la app Android original: después del registro se retorna
       // a la pantalla principal. Allí el menú ya corresponde a tipoUsuario 2.
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.home,
+        AppRoutes.buscarServicio,
         (route) => false,
       );
     } catch (error) {
