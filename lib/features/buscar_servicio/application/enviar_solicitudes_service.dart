@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_states.dart';
 import '../../../core/constants/firebase_paths.dart';
 import '../../../data/models/ofertante_model.dart';
+import '../../../data/models/producto_solicitud_ref.dart';
 import '../../../data/models/usuario_model.dart';
 import '../../../data/services/realtime_database_service.dart';
 
@@ -10,10 +11,12 @@ class SolicitudCandidata {
   const SolicitudCandidata({
     required this.ofertante,
     required this.distanciaKm,
+    this.productos = const <ProductoSolicitudRef>[],
   });
 
   final OfertanteModel ofertante;
   final double distanciaKm;
+  final List<ProductoSolicitudRef> productos;
 }
 
 class ResultadoEnvioSolicitudes {
@@ -110,6 +113,18 @@ class EnviarSolicitudesService {
         'horaCita': ' ',
         'estado': AppStates.elaborada,
       };
+
+      if (candidato.productos.isNotEmpty) {
+        final referencias = <String, Object?>{
+          for (final producto in candidato.productos)
+            producto.idProducto: producto.toFirebaseValue(),
+        };
+
+        // Se guardan SOLO referencias al catálogo + cantidad.
+        // No se copian nombre, precio, imagen ni total.
+        solicitud['productos'] = referencias;
+        bandeja['productos'] = referencias;
+      }
 
       await _database.set(
         '${FirebasePaths.solicitudes}/$idPcte/$fechaDia/$key',

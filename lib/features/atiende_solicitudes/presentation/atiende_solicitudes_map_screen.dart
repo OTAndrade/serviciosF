@@ -7,6 +7,8 @@ import '../../../core/constants/app_states.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../data/models/bandeja_model.dart';
+import '../../auth/application/auth_providers.dart';
+import '../../catalogo/presentation/productos_solicitud_resumen.dart';
 import '../../../features/home/presentation/widgets/ineed_drawer.dart';
 import '../../../shared/feedback/app_snackbar.dart';
 import '../../../shared/maps/app_map.dart';
@@ -497,6 +499,8 @@ class _AtiendeSolicitudesMapScreenState
   @override
   Widget build(BuildContext context) {
     final bandejaAsync = ref.watch(bandejaHoyProvider);
+    final uidOfertante =
+        ref.watch(authStateChangesProvider).asData?.value?.uid ?? '';
     final items = bandejaAsync.maybeWhen(
       data: (value) => value,
       orElse: () => const <BandejaModel>[],
@@ -560,6 +564,7 @@ class _AtiendeSolicitudesMapScreenState
               child: PointerInterceptor(
                 child: _SolicitudRecibidaInfoWindow(
                   bandeja: solicitudRecibidaActiva,
+                  uidOfertante: uidOfertante,
                   onClose: () {
                     setState(() {
                       _solicitudRecibidaSeleccionada = null;
@@ -586,6 +591,7 @@ class _AtiendeSolicitudesMapScreenState
               child: PointerInterceptor(
                 child: _SolicitudAceptadaInfoWindow(
                   bandeja: solicitudAceptadaActiva,
+                  uidOfertante: uidOfertante,
                   onClose: () {
                     setState(() {
                       _solicitudAceptadaSeleccionada = null;
@@ -603,6 +609,7 @@ class _AtiendeSolicitudesMapScreenState
               child: PointerInterceptor(
                 child: _SolicitudConfirmadaInfoWindow(
                   bandeja: solicitudConfirmadaActiva,
+                  uidOfertante: uidOfertante,
                   onClose: () {
                     setState(() {
                       _solicitudConfirmadaSeleccionada = null;
@@ -711,10 +718,12 @@ class _AtiendeSolicitudesMapScreenState
 class _SolicitudConfirmadaInfoWindow extends StatelessWidget {
   const _SolicitudConfirmadaInfoWindow({
     required this.bandeja,
+    required this.uidOfertante,
     required this.onClose,
   });
 
   final BandejaModel bandeja;
+  final String uidOfertante;
   final VoidCallback onClose;
 
   @override
@@ -771,6 +780,12 @@ class _SolicitudConfirmadaInfoWindow extends StatelessWidget {
                   'Nro. Ref: $telefono',
                   style: const TextStyle(color: Colors.white),
                 ),
+                if (bandeja.tieneProductos)
+                  ProductosSolicitudResumen(
+                    uidOfertante: uidOfertante,
+                    referencias: bandeja.productosReferencias,
+                    textColor: Colors.white,
+                  ),
               ],
             ),
           ),
@@ -792,10 +807,12 @@ class _SolicitudConfirmadaInfoWindow extends StatelessWidget {
 class _SolicitudAceptadaInfoWindow extends StatelessWidget {
   const _SolicitudAceptadaInfoWindow({
     required this.bandeja,
+    required this.uidOfertante,
     required this.onClose,
   });
 
   final BandejaModel bandeja;
+  final String uidOfertante;
   final VoidCallback onClose;
 
   @override
@@ -840,6 +857,12 @@ class _SolicitudAceptadaInfoWindow extends StatelessWidget {
                   'Señor(a): $nombre',
                   style: const TextStyle(color: Colors.white),
                 ),
+                if (bandeja.tieneProductos)
+                  ProductosSolicitudResumen(
+                    uidOfertante: uidOfertante,
+                    referencias: bandeja.productosReferencias,
+                    textColor: Colors.white,
+                  ),
               ],
             ),
           ),
@@ -861,11 +884,13 @@ class _SolicitudAceptadaInfoWindow extends StatelessWidget {
 class _SolicitudRecibidaInfoWindow extends StatelessWidget {
   const _SolicitudRecibidaInfoWindow({
     required this.bandeja,
+    required this.uidOfertante,
     required this.onClose,
     required this.onAceptar,
   });
 
   final BandejaModel bandeja;
+  final String uidOfertante;
   final VoidCallback onClose;
   final VoidCallback onAceptar;
 
@@ -907,6 +932,11 @@ class _SolicitudRecibidaInfoWindow extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text('Señor(a):\t$nombre'),
+                  if (bandeja.tieneProductos)
+                    ProductosSolicitudResumen(
+                      uidOfertante: uidOfertante,
+                      referencias: bandeja.productosReferencias,
+                    ),
                 ],
               ),
             ),

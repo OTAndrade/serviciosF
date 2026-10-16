@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
@@ -11,16 +12,18 @@ import '../../../core/geo/distance_calculator.dart';
 import '../../../core/location/app_location_service.dart';
 import '../../../data/models/ofertante_model.dart';
 import '../../../data/models/solicitud_model.dart';
+import '../../../data/models/producto_solicitud_ref.dart';
 import '../../../data/models/sub_rubro_model.dart';
 import '../../../features/home/application/session_providers.dart';
 import '../../../features/home/presentation/widgets/ineed_drawer.dart';
 import '../../../shared/feedback/app_snackbar.dart';
 import '../../../shared/maps/app_map.dart';
 import '../../../shared/maps/marker_icon_registry.dart';
+import '../../catalogo/presentation/catalogo_ofertante_sheet.dart';
+import '../../catalogo/presentation/productos_solicitud_resumen.dart';
 import '../application/buscar_servicio_providers.dart';
 import '../application/enviar_solicitudes_service.dart';
 import '../application/confirmar_solicitud_service.dart';
-import 'package:geolocator/geolocator.dart';
 
 class BuscarServicioMapScreen extends ConsumerStatefulWidget {
   const BuscarServicioMapScreen({super.key});
@@ -342,6 +345,128 @@ class _BuscarServicioMapScreenState
     return resultado;
   }
 
+  bool get _servicioPermiteCatalogo {
+    final rubro = _servicioSeleccionado?.rubro.trim().toLowerCase() ?? '';
+    return rubro.contains('alimento') ||
+        rubro.contains('bienestar') ||
+        rubro.contains('comercio');
+  }
+
+  String _uidOfertante(OfertanteModel ofertante) {
+    final usuario = ofertante.usuario?.trim() ?? '';
+    return usuario.isNotEmpty ? usuario : ofertante.key.trim();
+  }
+
+  Future<void> _abrirCatalogoOfertante(_OfertanteCercano item) async {
+    if (!_servicioPermiteCatalogo) return;
+
+    final ofertante = item.ofertante;
+    final uid = _uidOfertante(ofertante);
+    if (uid.isEmpty) {
+      AppSnackbar.show(
+        context,
+        'No se pudo identificar al ofertante.',
+        isError: true,
+      );
+      return;
+    }
+
+    final productos = await showCatalogoOfertanteSheet(
+      context,
+      uidOfertante: uid,
+      nombreOfertante: ofertante.nombre?.trim() ?? '',
+      direccion: ofertante.direccion?.trim() ?? '',
+      distanciaKm: item.distanciaKm,
+    );
+
+    if (!mounted || productos == null || productos.isEmpty) return;
+
+    await _enviarSolicitudCatalogo(
+      item,
+      productos,
+    );
+  }
+
+  Future<void> _enviarSolicitudCatalogo(
+    _OfertanteCercano ofertante,
+    List<ProductoSolicitudRef> productos,
+  ) async {
+    final servicio = _servicioSeleccionado;
+    final ubicacion = _ubicacionSolicitante;
+    final usuario = ref.read(currentUsuarioProvider).asData?.value;
+
+    if (servicio == null || ubicacion == null || usuario == null) {
+      AppSnackbar.show(
+        context,
+        'No se cuenta con toda la información necesaria para enviar la solicitud.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (_enviandoSolicitudes) return;
+
+    setState(() => _enviandoSolicitudes = true);
+
+    try {
+      final resultado = await EnviarSolicitudesService().enviar(
+        solicitante: usuario,
+        servicio: servicio.nombre,
+        latSolicitante: ubicacion.latitude,
+        lonSolicitante: ubicacion.longitude,
+        candidatos: <SolicitudCandidata>[
+          SolicitudCandidata(
+            ofertante: ofertante.ofertante,
+            distanciaKm: ofertante.distanciaKm,
+            productos: productos,
+          ),
+        ],
+      );
+
+      if (!mounted) return;
+
+      if (resultado.enviadas == 0) {
+        AppSnackbar.show(
+          context,
+          'No se pudo generar la solicitud para el ofertante seleccionado.',
+          isError: true,
+        );
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Solicitud enviada'),
+          content: const Text(
+            'La solicitud con los productos seleccionados fue enviada al ofertante.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted) return;
+      _restablecerDespuesDeEnvio();
+    } catch (error) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        'No se pudo enviar la solicitud: $error',
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _enviandoSolicitudes = false);
+      }
+    }
+  }
+
   Set<Marker> _buildOfertanteMarkers(List<_OfertanteCercano> ofertantes) {
     final markers = <Marker>{};
     final ubicacion = _ubicacionSolicitante;
@@ -384,7 +509,13 @@ class _BuscarServicioMapScreenState
           infoWindow: InfoWindow(
             title:
                 'Ofertante: $nombre a $distancia km${direccion.isEmpty ? '' : ' $direccion'}',
+            snippet: _servicioPermiteCatalogo
+                ? 'Toque el pin para ver productos disponibles'
+                : null,
           ),
+          onTap: _servicioPermiteCatalogo
+              ? () => _abrirCatalogoOfertante(item)
+              : null,
         ),
       );
     }
@@ -714,6 +845,10 @@ class _BuscarServicioMapScreenState
         ? _buildOfertanteMarkers(ofertantesCercanos)
         : _buildSolicitudMarkers(solicitudesDelDia);
 
+    // Límite superior dinámico para que las tarjetas de detalle
+    // nunca queden detrás de la barra "Buscar servicio".
+    final detalleTop = MediaQuery.paddingOf(context).top + 82;
+
     return Scaffold(
       drawer: const INeedDrawer(),
       body: Stack(
@@ -737,6 +872,7 @@ class _BuscarServicioMapScreenState
             Positioned(
               left: 24,
               right: 24,
+              top: detalleTop,
               bottom: 205,
               child: PointerInterceptor(
                 child: _SolicitudEnviadaInfoWindow(
@@ -753,6 +889,7 @@ class _BuscarServicioMapScreenState
             Positioned(
               left: 24,
               right: 24,
+              top: detalleTop,
               bottom: 205,
               child: PointerInterceptor(
                 child: _SolicitudAceptadaInfoWindow(
@@ -774,6 +911,7 @@ class _BuscarServicioMapScreenState
             Positioned(
               left: 24,
               right: 24,
+              top: detalleTop,
               bottom: 205,
               child: PointerInterceptor(
                 child: _SolicitudConfirmadaInfoWindow(
@@ -959,62 +1097,72 @@ class _SolicitudConfirmadaInfoWindow extends StatelessWidget {
     return Material(
       elevation: 7,
       borderRadius: BorderRadius.circular(10),
+      clipBehavior: Clip.antiAlias,
       color: const Color(0xFF444444),
       child: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 42, 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Center(
-                  child: Text(
-                    'Solicitud Confirmada',
-                    style: TextStyle(
-                      color: Color(0xFFF5A057),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 17,
+          Positioned.fill(
+            child: Scrollbar(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(18, 14, 42, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Center(
+                      child: Text(
+                        'Solicitud Confirmada',
+                        style: TextStyle(
+                          color: Color(0xFFF5A057),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Center(
-                  child: Text(
-                    'Ud. tiene una cita $fechaCitaTexto a hrs: $hora',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFFF5A057),
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 3),
+                    Center(
+                      child: Text(
+                        'Ud. tiene una cita $fechaCitaTexto a hrs: $hora',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFFF5A057),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Con el(la) señor(a): $nombre',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    Text(
+                      'Nro. Ref: $telefono',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    Text(
+                      'Dirección: $direccion',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    Text(
+                      'Costo atención: $costo',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    Text(
+                      'Distancia: $distancia',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    Text(
+                      'Años de experiencia: $experiencia',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    if (solicitud.tieneProductos)
+                      ProductosSolicitudResumen(
+                        uidOfertante: (solicitud.idDr ?? '').trim(),
+                        referencias: solicitud.productosReferencias,
+                        textColor: Colors.white,
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Con el(la) señor(a): $nombre',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                Text(
-                  'Nro. Ref: $telefono',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                Text(
-                  'Dirección: $direccion',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                Text(
-                  'Costo atención: $costo',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                Text(
-                  'Distancia: $distancia',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                Text(
-                  'Años de experiencia: $experiencia',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
+              ),
             ),
           ),
           Positioned(
@@ -1023,10 +1171,7 @@ class _SolicitudConfirmadaInfoWindow extends StatelessWidget {
             child: IconButton(
               tooltip: 'Cerrar',
               onPressed: onClose,
-              icon: const Icon(
-                Icons.close,
-                color: Colors.white,
-              ),
+              icon: const Icon(Icons.close, color: Colors.white),
             ),
           ),
         ],
@@ -1064,99 +1209,110 @@ class _SolicitudAceptadaInfoWindow extends StatelessWidget {
     return Material(
       elevation: 7,
       borderRadius: BorderRadius.circular(10),
+      clipBehavior: Clip.antiAlias,
       color: const Color(0xFF444444),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: confirmando ? null : onConfirmar,
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 42, 14),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Text(
-                      servicio,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFFF5A057),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  const Center(
-                    child: Text(
-                      'Solicitud aceptada',
-                      style: TextStyle(
-                        color: Color(0xFFF5A057),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Fecha cita $fechaCitaTexto',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  Text(
-                    'Hora $hora',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  Text(
-                    'Costo $costo',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  Text(
-                    'Experiencia $experiencia',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  Text(
-                    'Teléfono $telefono',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  Text(
-                    'Ofertante $nombre',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  Text(
-                    'Dirección $direccion',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: confirmando
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text(
-                            'Tocar para confirmar',
-                            style: TextStyle(
-                              color: Color(0xFFF5A057),
-                              fontWeight: FontWeight.bold,
-                            ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: InkWell(
+              onTap: confirmando ? null : onConfirmar,
+              child: Scrollbar(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 42, 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Text(
+                          servicio,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFFF5A057),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      const Center(
+                        child: Text(
+                          'Solicitud aceptada',
+                          style: TextStyle(
+                            color: Color(0xFFF5A057),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Fecha cita $fechaCitaTexto',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      Text(
+                        'Hora $hora',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      Text(
+                        'Costo $costo',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      Text(
+                        'Experiencia $experiencia',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      Text(
+                        'Teléfono $telefono',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      Text(
+                        'Ofertante $nombre',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      Text(
+                        'Dirección $direccion',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      if (solicitud.tieneProductos)
+                        ProductosSolicitudResumen(
+                          uidOfertante: (solicitud.idDr ?? '').trim(),
+                          referencias: solicitud.productosReferencias,
+                          textColor: Colors.white,
+                        ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: confirmando
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Tocar para confirmar',
+                                style: TextStyle(
+                                  color: Color(0xFFF5A057),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-            Positioned(
-              top: 2,
-              right: 2,
-              child: IconButton(
-                tooltip: 'Cerrar',
-                onPressed: onClose,
-                icon: const Icon(Icons.close, color: Colors.white),
-              ),
+          ),
+          Positioned(
+            top: 2,
+            right: 2,
+            child: IconButton(
+              tooltip: 'Cerrar',
+              onPressed: onClose,
+              icon: const Icon(Icons.close, color: Colors.white),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1181,30 +1337,39 @@ class _SolicitudEnviadaInfoWindow extends StatelessWidget {
     return Material(
       elevation: 7,
       borderRadius: BorderRadius.circular(10),
+      clipBehavior: Clip.antiAlias,
       color: Colors.white,
       child: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 42, 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Center(
-                  child: Text(
-                    'Solicitud enviada.',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+          Positioned.fill(
+            child: Scrollbar(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(18, 14, 42, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Center(
+                      child: Text(
+                        'Solicitud enviada.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Text('Sr(a): $nombre'),
+                    Text('Especialidad: $servicio'),
+                    Text('a $distancia Km. de distancia'),
+                    Text('Dirección: $direccion'),
+                    if (solicitud.tieneProductos)
+                      ProductosSolicitudResumen(
+                        uidOfertante: (solicitud.idDr ?? '').trim(),
+                        referencias: solicitud.productosReferencias,
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text('Sr(a): $nombre'),
-                Text('Especialidad: $servicio'),
-                Text('a $distancia Km. de distancia'),
-                Text('Dirección: $direccion'),
-              ],
+              ),
             ),
           ),
           Positioned(

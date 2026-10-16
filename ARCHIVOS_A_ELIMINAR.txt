@@ -1,1 +1,1 @@
-lib/features/home/presentation/home_shell_screen.dart
+lib/features/registra_oficio/application/catalogo_producto_service.dart

@@ -10,6 +10,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/location/app_location_service.dart';
 import '../../../data/models/sub_rubro_model.dart';
 import '../../home/application/session_providers.dart';
+import '../../catalogo/application/catalogo_producto_service.dart';
 import '../application/registra_oficio_service.dart';
 import '../../../features/buscar_servicio/application/buscar_servicio_providers.dart';
 import '../../../features/home/presentation/widgets/ineed_drawer.dart';
@@ -36,6 +37,9 @@ class _RegistraOficioScreenState extends ConsumerState<RegistraOficioScreen> {
   final _locationService = AppLocationService();
   final _imagePicker = ImagePicker();
   final _registraOficioService = RegistraOficioService();
+  final _catalogoProductoService = CatalogoProductoService();
+
+  final List<_ProductoPendiente> _productos = <_ProductoPendiente>[];
 
   SubRubroModel? _oficioSeleccionado;
   XFile? _imagenSeleccionada;
@@ -228,6 +232,281 @@ class _RegistraOficioScreenState extends ConsumerState<RegistraOficioScreen> {
     }
   }
 
+  bool get _oficioPermiteCatalogo {
+    final rubro = _normalizarRubro(_oficioSeleccionado?.rubro ?? '');
+
+    return rubro.contains('alimentos') ||
+        rubro.contains('bienestar') ||
+        rubro.contains('comercio');
+  }
+
+  String _normalizarRubro(String value) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ü', 'u');
+  }
+
+  Future<void> _agregarOEditarProducto({int? index}) async {
+    final existente = index == null ? null : _productos[index];
+    final nombreController = TextEditingController(
+      text: existente?.nombreItem ?? '',
+    );
+    final precioController = TextEditingController(
+      text: existente?.precioItem ?? '',
+    );
+
+    XFile? imagen = existente?.imagen;
+    Uint8List? imagenBytes = existente?.imagenBytes;
+    bool disponible = existente?.estado != 'IN';
+    bool seleccionandoImagen = false;
+    String? errorFormulario;
+
+    final producto = await showModalBottomSheet<_ProductoPendiente>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            Future<void> seleccionarImagenProducto() async {
+              if (seleccionandoImagen) return;
+
+              setSheetState(() {
+                seleccionandoImagen = true;
+                errorFormulario = null;
+              });
+
+              try {
+                final seleccion = await _imagePicker.pickImage(
+                  source: ImageSource.gallery,
+                );
+                if (seleccion == null) return;
+
+                final bytes = await seleccion.readAsBytes();
+                if (!sheetContext.mounted) return;
+
+                setSheetState(() {
+                  imagen = seleccion;
+                  imagenBytes = bytes;
+                });
+              } catch (error) {
+                if (!sheetContext.mounted) return;
+                setSheetState(() {
+                  errorFormulario =
+                      'No se pudo seleccionar la imagen del producto: $error';
+                });
+              } finally {
+                if (sheetContext.mounted) {
+                  setSheetState(() => seleccionandoImagen = false);
+                }
+              }
+            }
+
+            void guardarProducto() {
+              final nombre = nombreController.text.trim();
+              final precioTexto =
+                  precioController.text.trim().replaceAll(',', '.');
+              final precio = double.tryParse(precioTexto);
+
+              if (nombre.isEmpty) {
+                setSheetState(() {
+                  errorFormulario = 'Introduzca el nombre del producto.';
+                });
+                return;
+              }
+
+              if (precio == null || precio < 0) {
+                setSheetState(() {
+                  errorFormulario = 'Introduzca un precio válido.';
+                });
+                return;
+              }
+
+              if (imagen == null || imagenBytes == null) {
+                setSheetState(() {
+                  errorFormulario = 'Seleccione una imagen del producto.';
+                });
+                return;
+              }
+
+              Navigator.of(sheetContext).pop(
+                _ProductoPendiente(
+                  nombreItem: nombre,
+                  precioItem: precio.toStringAsFixed(2),
+                  imagen: imagen!,
+                  imagenBytes: imagenBytes!,
+                  estado: disponible ? 'AC' : 'IN',
+                ),
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      existente == null ? 'Agregar producto' : 'Editar producto',
+                      style: Theme.of(sheetContext).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 18),
+                    TextField(
+                      controller: nombreController,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del producto',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: precioController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Precio',
+                        hintText: '0.00',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text('Imagen del producto'),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: seleccionandoImagen
+                                      ? null
+                                      : seleccionarImagenProducto,
+                                  icon: seleccionandoImagen
+                                      ? const SizedBox.square(
+                                          dimension: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.photo_library_outlined),
+                                  label: const Text('Galería'),
+                                ),
+                                const SizedBox(width: 14),
+                                if (imagenBytes != null)
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.memory(
+                                      imagenBytes!,
+                                      width: 84,
+                                      height: 84,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                else
+                                  const SizedBox(
+                                    width: 84,
+                                    height: 84,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(8),
+                                        ),
+                                        border: Border.fromBorderSide(
+                                          BorderSide(),
+                                        ),
+                                      ),
+                                      child: Icon(Icons.image_outlined),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Disponible'),
+                      subtitle: Text(
+                        disponible
+                            ? 'El producto se mostrará como disponible.'
+                            : 'El producto se registrará como no disponible.',
+                      ),
+                      value: disponible,
+                      onChanged: (value) {
+                        setSheetState(() => disponible = value);
+                      },
+                    ),
+                    if (errorFormulario != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        errorFormulario!,
+                        style: TextStyle(
+                          color: Theme.of(sheetContext).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          child: const Text('Cancelar'),
+                        ),
+                        const SizedBox(width: 10),
+                        FilledButton.icon(
+                          onPressed: guardarProducto,
+                          icon: const Icon(Icons.check),
+                          label: Text(existente == null ? 'Agregar' : 'Guardar'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    nombreController.dispose();
+    precioController.dispose();
+
+    if (producto == null || !mounted) return;
+
+    setState(() {
+      if (index == null) {
+        _productos.add(producto);
+      } else {
+        _productos[index] = producto;
+      }
+    });
+  }
+
+  void _eliminarProducto(int index) {
+    setState(() => _productos.removeAt(index));
+  }
+
   void _mostrarError(String mensaje) {
     AppSnackbar.show(context, mensaje, isError: true);
   }
@@ -354,6 +633,23 @@ class _RegistraOficioScreenState extends ConsumerState<RegistraOficioScreen> {
         latitud: ubicacion.latitude,
         longitud: ubicacion.longitude,
       );
+
+      if (_oficioPermiteCatalogo && _productos.isNotEmpty) {
+        await _catalogoProductoService.registrarProductos(
+          uidOfertante: usuario.uid,
+          productos: _productos
+              .map(
+                (producto) => ProductoOfertanteInput(
+                  nombreItem: producto.nombreItem,
+                  precioItem: producto.precioItem,
+                  nombreArchivo: producto.imagen.name,
+                  imagenBytes: producto.imagenBytes,
+                  estado: producto.estado,
+                ),
+              )
+              .toList(growable: false),
+        );
+      }
 
       await _registraOficioService.actualizarTipoUsuarioAOfertante(
         uid: usuario.uid,
@@ -682,6 +978,136 @@ class _RegistraOficioScreenState extends ConsumerState<RegistraOficioScreen> {
                     ),
                   ),
 
+                  if (_oficioPermiteCatalogo) ...[
+                    const SizedBox(height: 20),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.inventory_2_outlined),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Catálogo de productos',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Este oficio pertenece al grupo '
+                              '"${_oficioSeleccionado?.rubro ?? ''}". '
+                              'Puede registrar los productos que ofrece. '
+                              'El catálogo es opcional.',
+                            ),
+                            const SizedBox(height: 14),
+                            OutlinedButton.icon(
+                              onPressed: _guardando
+                                  ? null
+                                  : () => _agregarOEditarProducto(),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Agregar producto'),
+                            ),
+                            if (_productos.isEmpty) ...[
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Todavía no se registraron productos.',
+                                textAlign: TextAlign.center,
+                              ),
+                            ] else ...[
+                              const SizedBox(height: 12),
+                              ...List.generate(_productos.length, (index) {
+                                final producto = _productos[index];
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(10),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          child: Image.memory(
+                                            producto.imagenBytes,
+                                            width: 72,
+                                            height: 72,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                producto.nombreItem,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleSmall,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'Precio: ${producto.precioItem}',
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                producto.estado == 'AC'
+                                                    ? 'Disponible'
+                                                    : 'No disponible',
+                                                style: TextStyle(
+                                                  color: producto.estado == 'AC'
+                                                      ? Theme.of(context)
+                                                          .colorScheme
+                                                          .primary
+                                                      : Theme.of(context)
+                                                          .colorScheme
+                                                          .outline,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Editar producto',
+                                          onPressed: _guardando
+                                              ? null
+                                              : () => _agregarOEditarProducto(
+                                                    index: index,
+                                                  ),
+                                          icon: const Icon(Icons.edit_outlined),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Eliminar producto',
+                                          onPressed: _guardando
+                                              ? null
+                                              : () => _eliminarProducto(index),
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 20),
                   FilledButton.icon(
                     onPressed:
@@ -711,6 +1137,22 @@ class _RegistraOficioScreenState extends ConsumerState<RegistraOficioScreen> {
       ),
     );
   }
+}
+
+class _ProductoPendiente {
+  const _ProductoPendiente({
+    required this.nombreItem,
+    required this.precioItem,
+    required this.imagen,
+    required this.imagenBytes,
+    required this.estado,
+  });
+
+  final String nombreItem;
+  final String precioItem;
+  final XFile imagen;
+  final Uint8List imagenBytes;
+  final String estado;
 }
 
 class _ListaOficios extends StatelessWidget {

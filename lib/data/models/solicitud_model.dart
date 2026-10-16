@@ -69,6 +69,41 @@ class SolicitudModel {
     );
   }
 
+
+  Map<String, int> get productosReferencias {
+    final rawProductos = raw['productos'];
+    if (rawProductos is! Map) return const <String, int>{};
+
+    final result = <String, int>{};
+
+    for (final entry in rawProductos.entries) {
+      final idProducto = entry.key.toString().trim();
+      if (idProducto.isEmpty) continue;
+
+      final value = entry.value;
+      Object? cantidadValue;
+
+      if (value is Map) {
+        cantidadValue = value['cantidad'];
+      } else {
+        // Compatibilidad defensiva si alguna referencia se guardó como entero.
+        cantidadValue = value;
+      }
+
+      final cantidad = cantidadValue is num
+          ? cantidadValue.toInt()
+          : int.tryParse(cantidadValue?.toString() ?? '');
+
+      if (cantidad != null && cantidad > 0) {
+        result[idProducto] = cantidad;
+      }
+    }
+
+    return Map<String, int>.unmodifiable(result);
+  }
+
+  bool get tieneProductos => productosReferencias.isNotEmpty;
+
   static double? _toDouble(Object? value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();

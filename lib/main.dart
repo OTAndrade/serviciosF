@@ -44,6 +44,6 @@ Future<void> _initializeBackgroundServices() async {
   try {
     await NotificationTokenService.initialize();
   } catch (_) {
-    // La app continúa aunque FCM/Google Play Services estén indisponibles.
+    // La app continúa aunque FCM/Google Play Services estén indisponibles.log
   }
 }
